@@ -115,10 +115,13 @@ func (c WebhooksConfig) NewWebhooks(ctx context.Context, server io.Server) (web.
 	case "":
 		return nil, nil
 	case "direct":
+		client, err := server.HTTPClient(ctx)
+		if err != nil {
+			return nil, err
+		}
+		client.Timeout = c.Timeout
 		target = &web.HTTPClientSink{
-			Client: &http.Client{
-				Timeout: c.Timeout,
-			},
+			Client: client,
 		}
 	default:
 		return nil, errWebhooksTarget.WithAttributes("target", c.Target)
@@ -165,7 +168,7 @@ func (c ApplicationPackagesConfig) NewApplicationPackages(ctx context.Context, s
 	handlers := make(map[string]packages.ApplicationPackageHandler)
 
 	// Initialize LoRa Cloud Device Management v1 package handler
-	loradmsHandler := loraclouddevicemanagementv1.New(server, c.Registry)
+	loradmsHandler := loraclouddevicemanagementv1.New(ctx, server, c.Registry)
 	handlers[loradmsHandler.Package().Name] = loradmsHandler
 
 	return packages.New(ctx, server, c.Registry, handlers)

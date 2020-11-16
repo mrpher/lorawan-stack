@@ -81,6 +81,7 @@ For details about compatibility between different releases, see the **Commitment
 ### Fixed
 
 - Do not initiate new contact info validations when old validations are still pending.
+- Use TLS client configuration for all external HTTP calls. This fixes issues where HTTP calls would fail if custom (e.g. self-signed) CAs were used.
 
 ## [3.10.5] - 2020-12-23
 

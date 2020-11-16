@@ -16,6 +16,7 @@ package io
 
 import (
 	"context"
+	"net/http"
 
 	"go.thethings.network/lorawan-stack/v3/pkg/config"
 	"go.thethings.network/lorawan-stack/v3/pkg/errorcontext"
@@ -44,6 +45,8 @@ type Server interface {
 	DownlinkQueueReplace(context.Context, ttnpb.EndDeviceIdentifiers, []*ttnpb.ApplicationDownlink) error
 	// DownlinkQueueList lists the application downlink queue of the given end device.
 	DownlinkQueueList(context.Context, ttnpb.EndDeviceIdentifiers) ([]*ttnpb.ApplicationDownlink, error)
+	// HTTPClient returns a configured *http.Client.
+	HTTPClient(context.Context) (*http.Client, error)
 }
 
 // ContextualApplicationUp represents an ttnpb.ApplicationUp with its context.

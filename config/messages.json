@@ -7073,6 +7073,15 @@
       "file": "qrcodegenerator.go"
     }
   },
+  "error:pkg/ratelimit:rate_limit_exceeded": {
+    "translations": {
+      "en": "rate limit exceeded"
+    },
+    "description": {
+      "package": "pkg/ratelimit",
+      "file": "grpc.go"
+    }
+  },
   "error:pkg/redis:decode": {
     "translations": {
       "en": "failed to decode value"

@@ -76,6 +76,7 @@ require (
 	github.com/jaytaylor/html2text v0.0.0-20200412013138-3577fbdbcff7
 	github.com/jinzhu/gorm v1.9.12
 	github.com/jmhodges/levigo v1.0.0 // indirect
+	github.com/juju/ratelimit v1.0.1
 	github.com/kr/pretty v0.2.0
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/labstack/gommon v0.3.0

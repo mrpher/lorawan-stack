@@ -36,6 +36,7 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/fillcontext"
 	"go.thethings.network/lorawan-stack/v3/pkg/jsonpb"
 	"go.thethings.network/lorawan-stack/v3/pkg/metrics"
+	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
 	"go.thethings.network/lorawan-stack/v3/pkg/rpcmetadata"
 	"go.thethings.network/lorawan-stack/v3/pkg/rpcmiddleware"
 	rpcfillcontext "go.thethings.network/lorawan-stack/v3/pkg/rpcmiddleware/fillcontext"
@@ -171,8 +172,16 @@ func New(ctx context.Context, opts ...Option) *Server {
 		metrics.UnaryServerInterceptor,
 		errors.UnaryServerInterceptor(),
 		// NOTE: All middleware that works with lorawan-stack/pkg/errors errors must be placed below.
+		(&ratelimit.GrpcRateLimiter{
+			Registry: ratelimit.NewRegistry(100, time.Second),
+			Key:      ratelimit.RemoteIP,
+			MaxWait:  ratelimit.MaxWait(time.Second),
+		}).UnaryServerInterceptor(),
 		sentrymiddleware.UnaryServerInterceptor(),
 		grpc_recovery.UnaryServerInterceptor(recoveryOpts...),
+		(&ratelimit.GrpcRateLimiter{
+			Registry: ratelimit.NewRegistry(5, 5*time.Second),
+		}).UnaryServerInterceptor(),
 		validator.UnaryServerInterceptor(),
 		hooks.UnaryServerInterceptor(),
 	}
@@ -230,6 +239,12 @@ func New(ctx context.Context, opts ...Option) *Server {
 			switch s {
 			case "x-total-count":
 				return "X-Total-Count", true
+			case "x-rate-limit-limit":
+				return "X-Rate-Limit-Limit", true
+			case "x-rate-limit-available":
+				return "X-Rate-Limit-Available", true
+			case "x-rate-limit-reset":
+				return "X-Rate-Limit-Reset", true
 			case "warning":
 				// NOTE: the "Warning" header in HTTP is specified differently than our "warning" gRPC metadata.
 				return "X-Warning", true

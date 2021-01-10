@@ -21,21 +21,43 @@ import (
 	"github.com/juju/ratelimit"
 )
 
+// RateLimiter can be used to rate limit access to a resource (using an id string).
+type RateLimiter interface {
+	Wait(id string) *Metadata
+	WaitMaxDuration(id string, maxDuration time.Duration) (*Metadata, bool)
+}
+
+// noopRateLimiter does not enforce any rate limits.
+type noopRateLimiter struct{}
+
+// Wait implements the RateLimiter interface.
+func (*noopRateLimiter) Wait(string) *Metadata {
+	return &Metadata{}
+}
+
+// WaitMaxDuration implements the RateLimiter interface.
+func (*noopRateLimiter) WaitMaxDuration(string, time.Duration) (*Metadata, bool) {
+	return &Metadata{}, true
+}
+
 // Registry for rate limiting.
 type Registry struct {
 	mu           sync.RWMutex
-	rate         int64
+	rate         uint64
 	per          time.Duration
 	resetSeconds int64
 	entities     map[string]*ratelimit.Bucket
 }
 
-// NewRegistry returns a new Registry for rate limiting
-func NewRegistry(rate int64, per time.Duration) *Registry {
+// New returns a new RateLimiter from configuration.
+func (c Config) New() RateLimiter {
+	if !c.Enabled {
+		return &noopRateLimiter{}
+	}
 	return &Registry{
-		rate:         rate,
-		per:          per,
-		resetSeconds: int64(per / time.Second),
+		rate:         uint64(c.Rate),
+		per:          time.Second,
+		resetSeconds: 1,
 		entities:     make(map[string]*ratelimit.Bucket),
 	}
 }
@@ -58,11 +80,6 @@ func (r *Registry) newFunc() *ratelimit.Bucket {
 	return ratelimit.NewBucketWithQuantum(r.per, int64(r.rate), int64(r.rate))
 }
 
-// Limit returns true if the ratelimit for the given entity has been reached.
-func (r *Registry) Limit(id string) bool {
-	return r.getOrCreate(id, r.newFunc).Take(1) != 0
-}
-
 // Wait returns the time to wait until available
 func (r *Registry) Wait(id string) *Metadata {
 	b := r.getOrCreate(id, r.newFunc)
@@ -71,7 +88,7 @@ func (r *Registry) Wait(id string) *Metadata {
 		Wait:         t,
 		ResetSeconds: r.resetSeconds,
 		Available:    b.Available(),
-		Limit:        r.rate,
+		Limit:        int64(r.rate),
 	}
 }
 
@@ -82,13 +99,13 @@ func (r *Registry) WaitMaxDuration(id string, max time.Duration) (*Metadata, boo
 	if !ok {
 		return &Metadata{
 			ResetSeconds: r.resetSeconds,
-			Limit:        r.rate,
+			Limit:        int64(r.rate),
 		}, false
 	}
 	return &Metadata{
 		Wait:         t,
 		ResetSeconds: r.resetSeconds,
 		Available:    b.Available(),
-		Limit:        r.rate,
+		Limit:        int64(r.rate),
 	}, true
 }

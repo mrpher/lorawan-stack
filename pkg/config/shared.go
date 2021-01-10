@@ -32,6 +32,7 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/fetch"
 	"go.thethings.network/lorawan-stack/v3/pkg/log"
 	"go.thethings.network/lorawan-stack/v3/pkg/redis"
+	"go.thethings.network/lorawan-stack/v3/pkg/rpcserver"
 	"gocloud.dev/blob"
 )
 
@@ -61,6 +62,8 @@ type GRPC struct {
 	TrustedProxies []string `name:"trusted-proxies" description:"CIDRs of trusted reverse proxies"`
 
 	LogIgnoreMethods []string `name:"log-ignore-methods" description:"List of paths for which successful requests will not be logged"`
+
+	RateLimiting rpcserver.RateLimitingConfig `name:"rate-limiting"`
 }
 
 // Cookie represents cookie configuration.

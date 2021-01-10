@@ -65,6 +65,7 @@ type options struct {
 	serverOptions      []grpc.ServerOption
 	trustedProxies     []string
 	logIgnoreMethods   []string
+	rateLimitingConfig RateLimitingConfig
 }
 
 // Option for the gRPC server
@@ -109,6 +110,13 @@ func WithTrustedProxies(cidrs ...string) Option {
 func WithLogIgnoreMethods(methods []string) Option {
 	return func(o *options) {
 		o.logIgnoreMethods = methods
+	}
+}
+
+// WithRateLimitingConfig sets rate limiting configuration.
+func WithRateLimitingConfig(conf RateLimitingConfig) Option {
+	return func(o *options) {
+		o.rateLimitingConfig = conf
 	}
 }
 
@@ -172,16 +180,9 @@ func New(ctx context.Context, opts ...Option) *Server {
 		metrics.UnaryServerInterceptor,
 		errors.UnaryServerInterceptor(),
 		// NOTE: All middleware that works with lorawan-stack/pkg/errors errors must be placed below.
-		(&ratelimit.GrpcRateLimiter{
-			Registry: ratelimit.NewRegistry(100, time.Second),
-			Key:      ratelimit.RemoteIP,
-			MaxWait:  ratelimit.MaxWait(time.Second),
-		}).UnaryServerInterceptor(),
+		ratelimit.GrpcUnaryServerInterceptor(options.rateLimitingConfig.ByRemoteIP, ratelimit.GrpcRemoteIP, ratelimit.GrpcMaxWait(time.Second)),
 		sentrymiddleware.UnaryServerInterceptor(),
 		grpc_recovery.UnaryServerInterceptor(recoveryOpts...),
-		(&ratelimit.GrpcRateLimiter{
-			Registry: ratelimit.NewRegistry(5, 5*time.Second),
-		}).UnaryServerInterceptor(),
 		validator.UnaryServerInterceptor(),
 		hooks.UnaryServerInterceptor(),
 	}

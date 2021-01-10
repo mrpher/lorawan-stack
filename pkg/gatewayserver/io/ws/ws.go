@@ -47,10 +47,16 @@ var (
 	errRateLimitExceeded = errors.DefineResourceExhausted("rate_limit_exceeded", "rate limit exceeded")
 )
 
-// rateLimitingMaxWait is the maximum duration to wait for a rate limiting token
-// to become available. This can be non-zero to allow short bursts of traffic,
-// but not very large to avoid missing device transmission windows.
-const rateLimitingMaxWait = 50 * time.Millisecond
+const (
+	// trafficMaxWait is the maximum duration to wait for a rate limiting token
+	// to become available. This can be non-zero to allow short bursts of traffic,
+	// but not very large to avoid missing device transmission windows.
+	trafficMaxWait = 50 * time.Millisecond
+
+	// connectionMaxWait is the maximum duration to block for a rate limiting token
+	// to become available when accepting new connections.
+	connectionMaxWait = time.Second
+)
 
 type srv struct {
 	ctx                  context.Context
@@ -78,7 +84,7 @@ func New(ctx context.Context, server io.Server, formatter Formatter, cfg Config)
 		middleware.ID(""),
 		echomiddleware.BodyLimit("16M"),
 		middleware.Log(log.FromContext(ctx)),
-		ratelimit.EchoMiddleware(cfg.RateLimiting.Connections, ratelimit.EchoPathAndIP, rateLimitingMaxWait),
+		ratelimit.EchoMiddleware(cfg.RateLimiting.Connections, ratelimit.EchoPathAndIP, connectionMaxWait),
 		middleware.Recover(),
 	)
 
@@ -299,7 +305,7 @@ func (s *srv) handleTraffic(c echo.Context) (err error) {
 	}()
 
 	for {
-		if _, ok := s.rateLimiter.WaitMaxDuration(uid, rateLimitingMaxWait); !ok {
+		if _, ok := s.rateLimiter.WaitMaxDuration(uid, trafficMaxWait); !ok {
 			err := errRateLimitExceeded.New()
 			// TODO: observability
 			logger.WithError(err).Warn("Rate limiting exceeded")

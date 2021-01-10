@@ -346,8 +346,10 @@ func (c *connection) deliver(pkt *packet.PublishPacket) {
 		uid := unique.ID(c.io.Context(), c.io.Gateway().GatewayIdentifiers)
 		md, ok := c.rateLimiter.WaitMaxDuration(uid, trafficMaxWait)
 		if !ok {
+			// TODO: observability
 			err := errRateLimitExceeded.New()
 			logger.WithError(err).Error("Rate limit exceeded")
+			// Terminate connections that exceed the allowed traffic rate limit.
 			c.io.Disconnect(err)
 			return
 		}

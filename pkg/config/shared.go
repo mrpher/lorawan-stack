@@ -31,7 +31,6 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/errors"
 	"go.thethings.network/lorawan-stack/v3/pkg/fetch"
 	"go.thethings.network/lorawan-stack/v3/pkg/log"
-	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
 	"go.thethings.network/lorawan-stack/v3/pkg/redis"
 	"go.thethings.network/lorawan-stack/v3/pkg/rpcserver"
 	"gocloud.dev/blob"
@@ -414,11 +413,10 @@ func (c ServiceBase) FrequencyPlansFetcher(ctx context.Context) (fetch.Interface
 
 // MQTT contains the listen and public addresses of an MQTT frontend.
 type MQTT struct {
-	Listen           string           `name:"listen" description:"Address for the MQTT frontend to listen on"`
-	ListenTLS        string           `name:"listen-tls" description:"Address for the MQTTS frontend to listen on"`
-	PublicAddress    string           `name:"public-address" description:"Public address of the MQTT frontend"`
-	PublicTLSAddress string           `name:"public-tls-address" description:"Public address of the MQTTs frontend"`
-	RateLimiting     ratelimit.Config `name:"rate-limiting"`
+	Listen           string `name:"listen" description:"Address for the MQTT frontend to listen on"`
+	ListenTLS        string `name:"listen-tls" description:"Address for the MQTTS frontend to listen on"`
+	PublicAddress    string `name:"public-address" description:"Public address of the MQTT frontend"`
+	PublicTLSAddress string `name:"public-tls-address" description:"Public address of the MQTTs frontend"`
 }
 
 // MQTTConfigProvider provides contextual access to MQTT configuration.

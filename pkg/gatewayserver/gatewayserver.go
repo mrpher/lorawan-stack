@@ -210,7 +210,7 @@ func New(c *component.Component, conf *Config, opts ...Option) (gs *GatewayServe
 	// Start MQTT listeners.
 	for _, version := range []struct {
 		Format mqtt.Format
-		Config config.MQTT
+		Config mqtt.Config
 	}{
 		{
 			Format: mqtt.NewProtobuf(gs.ctx),
@@ -249,7 +249,7 @@ func New(c *component.Component, conf *Config, opts ...Option) (gs *GatewayServe
 						)
 					}
 					defer lis.Close()
-					return mqtt.Serve(ctx, gs, lis, version.Format, endpoint.Protocol(), version.Config.RateLimiting.New())
+					return mqtt.Serve(ctx, gs, lis, version.Format, endpoint.Protocol(), version.Config)
 				},
 				Restart: component.TaskRestartOnFailure,
 				Backoff: component.DefaultTaskBackoffConfig,
@@ -348,7 +348,7 @@ func (gs *GatewayServer) RegisterServices(s *grpc.Server) {
 				if err != nil {
 					return nil, err
 				}
-				return &config.MQTT, nil
+				return &config.MQTT.MQTT, nil
 			})),
 		iogrpc.WithMQTTV2ConfigProvider(
 			config.MQTTConfigProviderFunc(func(ctx context.Context) (*config.MQTT, error) {
@@ -356,7 +356,7 @@ func (gs *GatewayServer) RegisterServices(s *grpc.Server) {
 				if err != nil {
 					return nil, err
 				}
-				return &config.MQTTV2, nil
+				return &config.MQTTV2.MQTT, nil
 			})),
 	))
 }
@@ -929,7 +929,7 @@ func (gs *GatewayServer) GetMQTTConfig(ctx context.Context) (*config.MQTT, error
 	if err != nil {
 		return nil, err
 	}
-	return &config.MQTT, nil
+	return &config.MQTT.MQTT, nil
 }
 
 var errHandlerRecovered = errors.DefineInternal("handler_recovered", "internal server error")

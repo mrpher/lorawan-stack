@@ -21,6 +21,7 @@ import (
 	"go.thethings.network/lorawan-stack/v3/cmd/internal/shared"
 	"go.thethings.network/lorawan-stack/v3/pkg/config"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver"
+	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/mqtt"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/udp"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/ws"
 )
@@ -38,17 +39,21 @@ var DefaultGatewayServerConfig = gatewayserver.Config{
 			":1700": "",
 		},
 	},
-	MQTTV2: config.MQTT{
-		Listen:           ":1881",
-		ListenTLS:        ":8881",
-		PublicAddress:    fmt.Sprintf("%s:1881", shared.DefaultPublicHost),
-		PublicTLSAddress: fmt.Sprintf("%s:8881", shared.DefaultPublicHost),
+	MQTTV2: mqtt.Config{
+		MQTT: config.MQTT{
+			Listen:           ":1881",
+			ListenTLS:        ":8881",
+			PublicAddress:    fmt.Sprintf("%s:1881", shared.DefaultPublicHost),
+			PublicTLSAddress: fmt.Sprintf("%s:8881", shared.DefaultPublicHost),
+		},
 	},
-	MQTT: config.MQTT{
-		Listen:           ":1882",
-		ListenTLS:        ":8882",
-		PublicAddress:    fmt.Sprintf("%s:1882", shared.DefaultPublicHost),
-		PublicTLSAddress: fmt.Sprintf("%s:8882", shared.DefaultPublicHost),
+	MQTT: mqtt.Config{
+		MQTT: config.MQTT{
+			Listen:           ":1882",
+			ListenTLS:        ":8882",
+			PublicAddress:    fmt.Sprintf("%s:1882", shared.DefaultPublicHost),
+			PublicTLSAddress: fmt.Sprintf("%s:8882", shared.DefaultPublicHost),
+		},
 	},
 	BasicStation: gatewayserver.BasicStationConfig{
 		Config:                 ws.DefaultConfig,

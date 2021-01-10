@@ -61,10 +61,10 @@ type srv struct {
 var errMQTTFrontendRecovered = errors.DefineInternal("mqtt_frontend_recovered", "internal server error")
 
 // Serve serves the MQTT frontend.
-func Serve(ctx context.Context, server io.Server, listener net.Listener, format Format, protocol string, rateLimiter ratelimit.RateLimiter) error {
+func Serve(ctx context.Context, server io.Server, listener net.Listener, format Format, protocol string, conf Config) error {
 	ctx = log.NewContextWithField(ctx, "namespace", "gatewayserver/io/mqtt")
 	ctx = mqttlog.NewContext(ctx, mqtt.Logger(log.FromContext(ctx)))
-	s := &srv{ctx, server, format, mqttnet.NewListener(listener, protocol), rateLimiter}
+	s := &srv{ctx, server, format, mqttnet.NewListener(listener, protocol), conf.RateLimiting.Traffic.New()}
 	go func() {
 		<-ctx.Done()
 		s.lis.Close()

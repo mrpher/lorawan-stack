@@ -17,7 +17,7 @@ package gatewayserver
 import (
 	"time"
 
-	"go.thethings.network/lorawan-stack/v3/pkg/config"
+	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/mqtt"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/udp"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/ws"
 	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
@@ -50,8 +50,8 @@ type Config struct {
 
 	Forward map[string][]string `name:"forward" description:"Forward the DevAddr prefixes to the specified hosts"`
 
-	MQTT         config.MQTT        `name:"mqtt"`
-	MQTTV2       config.MQTT        `name:"mqtt-v2"`
+	MQTT         mqtt.Config        `name:"mqtt"`
+	MQTTV2       mqtt.Config        `name:"mqtt-v2"`
 	UDP          UDPConfig          `name:"udp"`
 	BasicStation BasicStationConfig `name:"basic-station"`
 }

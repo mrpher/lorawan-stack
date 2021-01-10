@@ -39,6 +39,7 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/frequencyplans"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io"
+	gsmqtt "go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/mqtt"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/udp"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/ws"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io/ws/lbslns"
@@ -91,8 +92,10 @@ func TestGatewayServer(t *testing.T) {
 	config := &gatewayserver.Config{
 		RequireRegisteredGateways:         false,
 		UpdateGatewayLocationDebounceTime: 0,
-		MQTT: config.MQTT{
-			Listen: ":1882",
+		MQTT: gsmqtt.Config{
+			MQTT: config.MQTT{
+				Listen: ":1882",
+			},
 		},
 		UDP: gatewayserver.UDPConfig{
 			Config: udp.Config{

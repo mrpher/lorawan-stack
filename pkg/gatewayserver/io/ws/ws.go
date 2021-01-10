@@ -78,6 +78,7 @@ func New(ctx context.Context, server io.Server, formatter Formatter, cfg Config)
 		middleware.ID(""),
 		echomiddleware.BodyLimit("16M"),
 		middleware.Log(log.FromContext(ctx)),
+		ratelimit.EchoMiddleware(cfg.RateLimiting.Connections, ratelimit.EchoPathAndIP, rateLimitingMaxWait),
 		middleware.Recover(),
 	)
 
@@ -88,7 +89,7 @@ func New(ctx context.Context, server io.Server, formatter Formatter, cfg Config)
 		webServer:   webServer,
 		formatter:   formatter,
 		cfg:         cfg,
-		rateLimiter: cfg.RateLimiting.New(),
+		rateLimiter: cfg.RateLimiting.Traffic.New(),
 	}
 
 	eps := s.formatter.Endpoints()

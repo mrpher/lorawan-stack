@@ -22,10 +22,13 @@ import (
 
 // Config defines the LoRa Basics Station configuration of the Gateway Server.
 type Config struct {
-	UseTrafficTLSAddress bool             `name:"use-traffic-tls-address" description:"Use WSS for the traffic address regardless of the TLS setting"`
-	WSPingInterval       time.Duration    `name:"ws-ping-interval" description:"Interval to send WS ping messages"`
-	AllowUnauthenticated bool             `name:"allow-unauthenticated" description:"Allow unauthenticated connections"`
-	RateLimiting         ratelimit.Config `name:"rate-limiting"`
+	UseTrafficTLSAddress bool          `name:"use-traffic-tls-address" description:"Use WSS for the traffic address regardless of the TLS setting"`
+	WSPingInterval       time.Duration `name:"ws-ping-interval" description:"Interval to send WS ping messages"`
+	AllowUnauthenticated bool          `name:"allow-unauthenticated" description:"Allow unauthenticated connections"`
+	RateLimiting         struct {
+		Traffic     ratelimit.Config `name:"messages" description:"Rate limit gateway traffic"`
+		Connections ratelimit.Config `name:"connections" description:"Rate limit gateway connections"`
+	} `name:"rate-limiting"`
 }
 
 // DefaultConfig contains the default configuration.

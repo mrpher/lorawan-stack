@@ -16,6 +16,6 @@ package ratelimit
 
 // Config represents configuration for rate limiting.
 type Config struct {
-	Enabled bool   `name:"enabled" description:"Enable rate limits"`
-	Rate    uint32 `name:"rate" description:"Maximum allowed rate per second"`
+	Enable bool   `name:"enable" description:"Enable rate limits"`
+	Rate   uint32 `name:"rate" description:"Maximum allowed rate per second"`
 }

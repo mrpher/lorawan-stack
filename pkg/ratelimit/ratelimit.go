@@ -51,7 +51,7 @@ type Registry struct {
 
 // New returns a new RateLimiter from configuration.
 func (c Config) New() RateLimiter {
-	if !c.Enabled {
+	if !c.Enable {
 		return &noopRateLimiter{}
 	}
 	return &Registry{

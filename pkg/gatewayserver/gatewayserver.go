@@ -249,7 +249,7 @@ func New(c *component.Component, conf *Config, opts ...Option) (gs *GatewayServe
 						)
 					}
 					defer lis.Close()
-					return mqtt.Serve(ctx, gs, lis, version.Format, endpoint.Protocol())
+					return mqtt.Serve(ctx, gs, lis, version.Format, endpoint.Protocol(), version.Config.RateLimiting.New())
 				},
 				Restart: component.TaskRestartOnFailure,
 				Backoff: component.DefaultTaskBackoffConfig,

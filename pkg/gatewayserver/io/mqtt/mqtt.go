@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"github.com/TheThingsIndustries/mystique/pkg/auth"
 	mqttlog "github.com/TheThingsIndustries/mystique/pkg/log"
@@ -33,27 +34,37 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io"
 	"go.thethings.network/lorawan-stack/v3/pkg/log"
 	"go.thethings.network/lorawan-stack/v3/pkg/mqtt"
+	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
 	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
 	"go.thethings.network/lorawan-stack/v3/pkg/unique"
 	"google.golang.org/grpc/metadata"
 )
 
-const qosDownlink byte = 0
+const (
+	qosDownlink byte = 0
+
+	// rateLimitingMaxWait is the maximum duration to wait for a rate limiting token
+	// to become available. This can be non-zero to allow short bursts of traffic,
+	// but not very large to avoid missing device transmission windows.
+	rateLimitingMaxWait = 50 * time.Millisecond
+)
 
 type srv struct {
 	ctx    context.Context
 	server io.Server
 	format Format
 	lis    mqttnet.Listener
+
+	rateLimiter ratelimit.RateLimiter
 }
 
 var errMQTTFrontendRecovered = errors.DefineInternal("mqtt_frontend_recovered", "internal server error")
 
 // Serve serves the MQTT frontend.
-func Serve(ctx context.Context, server io.Server, listener net.Listener, format Format, protocol string) error {
+func Serve(ctx context.Context, server io.Server, listener net.Listener, format Format, protocol string, rateLimiter ratelimit.RateLimiter) error {
 	ctx = log.NewContextWithField(ctx, "namespace", "gatewayserver/io/mqtt")
 	ctx = mqttlog.NewContext(ctx, mqtt.Logger(log.FromContext(ctx)))
-	s := &srv{ctx, server, format, mqttnet.NewListener(listener, protocol)}
+	s := &srv{ctx, server, format, mqttnet.NewListener(listener, protocol), rateLimiter}
 	go func() {
 		<-ctx.Done()
 		s.lis.Close()
@@ -63,6 +74,7 @@ func Serve(ctx context.Context, server io.Server, listener net.Listener, format 
 
 func (s *srv) accept() error {
 	for {
+		// TODO: rate limit accepting new connections
 		mqttConn, err := s.lis.Accept()
 		if err != nil {
 			if s.ctx.Err() == nil {
@@ -73,7 +85,12 @@ func (s *srv) accept() error {
 
 		go func() {
 			ctx := log.NewContextWithFields(s.ctx, log.Fields("remote_addr", mqttConn.RemoteAddr().String()))
-			conn := &connection{server: s.server, mqtt: mqttConn, format: s.format}
+			conn := &connection{
+				server:      s.server,
+				mqtt:        mqttConn,
+				format:      s.format,
+				rateLimiter: s.rateLimiter,
+			}
 			if err := conn.setup(ctx); err != nil {
 				switch err {
 				case stdio.EOF, stdio.ErrUnexpectedEOF:
@@ -93,6 +110,8 @@ type connection struct {
 	mqtt    mqttnet.Conn
 	session session.Session
 	io      *io.Connection
+
+	rateLimiter ratelimit.RateLimiter
 }
 
 func (*connection) Protocol() string            { return "mqtt" }
@@ -289,8 +308,26 @@ func (c *connection) CanWrite(info *auth.Info, topicParts ...string) bool {
 	return false
 }
 
+var (
+	errRateLimitExceeded = errors.DefineResourceExhausted("rate_limit_exceeded", "rate limit exceeded")
+)
+
 func (c *connection) deliver(pkt *packet.PublishPacket) {
 	logger := log.FromContext(c.io.Context()).WithField("topic", pkt.TopicName)
+
+	// TODO: uid can be stored in connection to avoid formatting on every message
+	if c.rateLimiter != nil {
+		uid := unique.ID(c.io.Context(), c.io.Gateway().GatewayIdentifiers)
+		md, ok := c.rateLimiter.WaitMaxDuration(uid, rateLimitingMaxWait)
+		if !ok {
+			err := errRateLimitExceeded.New()
+			logger.WithError(err).Error("Rate limit exceeded")
+			c.io.Disconnect(err)
+			return
+		}
+		time.Sleep(md.Wait)
+	}
+
 	switch {
 	case c.format.IsBirthTopic(pkt.TopicParts):
 	case c.format.IsLastWillTopic(pkt.TopicParts):

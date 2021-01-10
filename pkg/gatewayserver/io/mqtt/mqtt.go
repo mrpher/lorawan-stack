@@ -43,10 +43,14 @@ import (
 const (
 	qosDownlink byte = 0
 
-	// rateLimitingMaxWait is the maximum duration to wait for a rate limiting token
+	// trafficMaxWait is the maximum duration to wait for a rate limiting token
 	// to become available. This can be non-zero to allow short bursts of traffic,
 	// but not very large to avoid missing device transmission windows.
-	rateLimitingMaxWait = 50 * time.Millisecond
+	trafficMaxWait = 50 * time.Millisecond
+
+	// connectionMaxWait is the maximum duration to block for a rate limiting token
+	// to become available when accepting new connections.
+	connectionMaxWait = time.Second
 )
 
 type srv struct {
@@ -55,7 +59,8 @@ type srv struct {
 	format Format
 	lis    mqttnet.Listener
 
-	rateLimiter ratelimit.RateLimiter
+	connRateLimiter    ratelimit.RateLimiter
+	trafficRateLimiter ratelimit.RateLimiter
 }
 
 var errMQTTFrontendRecovered = errors.DefineInternal("mqtt_frontend_recovered", "internal server error")
@@ -64,7 +69,15 @@ var errMQTTFrontendRecovered = errors.DefineInternal("mqtt_frontend_recovered", 
 func Serve(ctx context.Context, server io.Server, listener net.Listener, format Format, protocol string, conf Config) error {
 	ctx = log.NewContextWithField(ctx, "namespace", "gatewayserver/io/mqtt")
 	ctx = mqttlog.NewContext(ctx, mqtt.Logger(log.FromContext(ctx)))
-	s := &srv{ctx, server, format, mqttnet.NewListener(listener, protocol), conf.RateLimiting.Traffic.New()}
+	s := &srv{
+		ctx:    ctx,
+		server: server,
+		format: format,
+		lis:    mqttnet.NewListener(listener, protocol),
+
+		connRateLimiter:    conf.RateLimiting.Connections.New(),
+		trafficRateLimiter: conf.RateLimiting.Traffic.New(),
+	}
 	go func() {
 		<-ctx.Done()
 		s.lis.Close()
@@ -74,7 +87,6 @@ func Serve(ctx context.Context, server io.Server, listener net.Listener, format 
 
 func (s *srv) accept() error {
 	for {
-		// TODO: rate limit accepting new connections
 		mqttConn, err := s.lis.Accept()
 		if err != nil {
 			if s.ctx.Err() == nil {
@@ -83,13 +95,27 @@ func (s *srv) accept() error {
 			return err
 		}
 
+		// TODO: we should rate limit per Gateway EUI as well.
+		if s.connRateLimiter != nil {
+			md, ok := s.connRateLimiter.WaitMaxDuration(mqttConn.RemoteAddr().String(), connectionMaxWait)
+			if !ok {
+				err := errRateLimitExceeded.New()
+				log.FromContext(s.ctx).WithError(err).Warn("Rate limit exceeded")
+				if err := mqttConn.Close(); err != nil {
+					log.FromContext(s.ctx).WithError(err).Warn("Close connection failed")
+				}
+				return err
+			}
+			time.Sleep(md.Wait)
+		}
+
 		go func() {
 			ctx := log.NewContextWithFields(s.ctx, log.Fields("remote_addr", mqttConn.RemoteAddr().String()))
 			conn := &connection{
 				server:      s.server,
 				mqtt:        mqttConn,
 				format:      s.format,
-				rateLimiter: s.rateLimiter,
+				rateLimiter: s.trafficRateLimiter,
 			}
 			if err := conn.setup(ctx); err != nil {
 				switch err {
@@ -315,10 +341,10 @@ var (
 func (c *connection) deliver(pkt *packet.PublishPacket) {
 	logger := log.FromContext(c.io.Context()).WithField("topic", pkt.TopicName)
 
-	// TODO: uid can be stored in connection to avoid formatting on every message
+	// TODO: uid could be stored in connection to avoid formatting on every message
 	if c.rateLimiter != nil {
 		uid := unique.ID(c.io.Context(), c.io.Gateway().GatewayIdentifiers)
-		md, ok := c.rateLimiter.WaitMaxDuration(uid, rateLimitingMaxWait)
+		md, ok := c.rateLimiter.WaitMaxDuration(uid, trafficMaxWait)
 		if !ok {
 			err := errRateLimitExceeded.New()
 			logger.WithError(err).Error("Rate limit exceeded")

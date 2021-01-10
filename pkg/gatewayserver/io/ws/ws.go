@@ -32,6 +32,7 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/frequencyplans"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io"
 	"go.thethings.network/lorawan-stack/v3/pkg/log"
+	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
 	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
 	"go.thethings.network/lorawan-stack/v3/pkg/types"
 	"go.thethings.network/lorawan-stack/v3/pkg/unique"
@@ -41,9 +42,15 @@ import (
 )
 
 var (
-	errGatewayID      = errors.DefineInvalidArgument("invalid_gateway_id", "invalid gateway ID `{id}`")
-	errNoAuthProvided = errors.DefineUnauthenticated("no_auth_provided", "no auth provided `{uid}`")
+	errGatewayID         = errors.DefineInvalidArgument("invalid_gateway_id", "invalid gateway ID `{id}`")
+	errNoAuthProvided    = errors.DefineUnauthenticated("no_auth_provided", "no auth provided `{uid}`")
+	errRateLimitExceeded = errors.DefineResourceExhausted("rate_limit_exceeded", "rate limit exceeded")
 )
+
+// rateLimitingMaxWait is the maximum duration to wait for a rate limiting token
+// to become available. This can be non-zero to allow short bursts of traffic,
+// but not very large to avoid missing device transmission windows.
+const rateLimitingMaxWait = 50 * time.Millisecond
 
 type srv struct {
 	ctx                  context.Context
@@ -54,6 +61,7 @@ type srv struct {
 	wsPingInterval       time.Duration
 	cfg                  Config
 	formatter            Formatter
+	rateLimiter          ratelimit.RateLimiter
 }
 
 func (s *srv) Protocol() string            { return "ws" }
@@ -74,12 +82,13 @@ func New(ctx context.Context, server io.Server, formatter Formatter, cfg Config)
 	)
 
 	s := &srv{
-		ctx:       ctx,
-		server:    server,
-		upgrader:  &websocket.Upgrader{},
-		webServer: webServer,
-		formatter: formatter,
-		cfg:       cfg,
+		ctx:         ctx,
+		server:      server,
+		upgrader:    &websocket.Upgrader{},
+		webServer:   webServer,
+		formatter:   formatter,
+		cfg:         cfg,
+		rateLimiter: cfg.RateLimiting.New(),
 	}
 
 	eps := s.formatter.Endpoints()
@@ -289,6 +298,14 @@ func (s *srv) handleTraffic(c echo.Context) (err error) {
 	}()
 
 	for {
+		if _, ok := s.rateLimiter.WaitMaxDuration(uid, rateLimitingMaxWait); !ok {
+			err := errRateLimitExceeded.New()
+			// TODO: observability
+			logger.WithError(err).Warn("Rate limiting exceeded")
+			// Terminate connections that exceed the allowed traffic rate limit.
+			conn.Disconnect(err)
+			return err
+		}
 		_, data, err := ws.ReadMessage()
 		if err != nil {
 			logger.WithError(err).Debug("Failed to read message")

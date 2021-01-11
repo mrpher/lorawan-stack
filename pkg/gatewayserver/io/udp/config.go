@@ -14,7 +14,11 @@
 
 package udp
 
-import "time"
+import (
+	"time"
+
+	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
+)
 
 // RateLimitingConfig contains configuration settings for the rate limiting
 // capabilities of the UDP gateway frontend firewall.
@@ -22,6 +26,8 @@ type RateLimitingConfig struct {
 	Enable    bool          `name:"enable" description:"Enable rate limiting for gateways"`
 	Messages  int           `name:"messages" description:"Number of past messages to check timestamp for"`
 	Threshold time.Duration `name:"threshold" description:"Filter packet if timestamp is not newer than the older timestamps of the previous messages by this threshold"`
+
+	RemoteIP ratelimit.Config `name:"remote-ip" description:"Rate limit packages based on Remote IP address"`
 }
 
 // Config contains configuration settings for the UDP gateway frontend.

@@ -29,11 +29,17 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/io"
 	"go.thethings.network/lorawan-stack/v3/pkg/gatewayserver/scheduling"
 	"go.thethings.network/lorawan-stack/v3/pkg/log"
+	"go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
 	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
 	encoding "go.thethings.network/lorawan-stack/v3/pkg/ttnpb/udp"
 	"go.thethings.network/lorawan-stack/v3/pkg/types"
 	"go.thethings.network/lorawan-stack/v3/pkg/unique"
 )
+
+// trafficMaxWait is the maximum duration to wait for a rate limiting token
+// to become available. This can be non-zero to allow short bursts of traffic,
+// but not very large to avoid missing device transmission windows.
+const trafficMaxWait = 50 * time.Millisecond
 
 type srv struct {
 	ctx    context.Context
@@ -44,12 +50,17 @@ type srv struct {
 	packetCh    chan encoding.Packet
 	connections sync.Map
 	firewall    Firewall
+
+	ipRateLimiter ratelimit.RateLimiter
 }
 
 func (*srv) Protocol() string            { return "udp" }
 func (*srv) SupportsDownlinkClaim() bool { return true }
 
-var errUDPFrontendRecovered = errors.DefineInternal("udp_frontend_recovered", "internal server error")
+var (
+	errRateLimitExceededForAddress = errors.DefineResourceExhausted("rate_limit_exceeded_for_address", "rate limit exceeded for address `{address}`")
+	errUDPFrontendRecovered        = errors.DefineInternal("udp_frontend_recovered", "internal server error")
+)
 
 // Serve serves the UDP frontend.
 func Serve(ctx context.Context, server io.Server, conn *net.UDPConn, config Config) error {
@@ -68,6 +79,8 @@ func Serve(ctx context.Context, server io.Server, conn *net.UDPConn, config Conf
 		conn:     conn,
 		packetCh: make(chan encoding.Packet, config.PacketBuffer),
 		firewall: firewall,
+
+		ipRateLimiter: config.RateLimiting.RemoteIP.New(),
 	}
 	go s.gc()
 	go func() {
@@ -96,6 +109,16 @@ func (s *srv) read() (err error) {
 			}
 			return err
 		}
+
+		// TODO: Determine whether we should take the remote UDP port into account for this
+		md, ok := s.ipRateLimiter.WaitMaxDuration(addr.String(), trafficMaxWait)
+		if !ok {
+			err := errRateLimitExceededForAddress.WithAttributes("address", addr.String())
+			log.FromContext(s.ctx).WithError(err).Warn("Rate limit exceeded, dropping packet")
+			continue
+		}
+		time.Sleep(md.Wait)
+
 		now := time.Now()
 
 		packetBuf := make([]byte, n)

@@ -14596,10 +14596,15 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Correlation IDs for the downlink message.\nSet automatically by the UDP and LBS frontends.\nFor gRPC and the MQTT v3 frontends, the correlation IDs must match the ones of the downlink message the TxAck message refers to."
         },
         "result": {
           "$ref": "#/definitions/TxAcknowledgmentResult"
+        },
+        "downlink_message": {
+          "$ref": "#/definitions/v3DownlinkMessage",
+          "description": "Copy of the acknowledged downlink message. Set by the Gateway Server.\nFor the UDP and LBS frontends, the downlink token of the TxAck message is used.\nFor the gRPC and MQTT frontends, the correlation IDs are used."
         }
       }
     },

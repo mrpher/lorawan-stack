@@ -15344,7 +15344,7 @@
             },
             {
               "name": "tx_acknowledgment",
-              "description": "A transmission acknowledgement or error.",
+              "description": "A transmission acknowledgment or error.",
               "label": "",
               "type": "TxAcknowledgment",
               "longType": "TxAcknowledgment",
@@ -23840,6 +23840,37 @@
           ]
         },
         {
+          "name": "GatewayTxAcknowledgment",
+          "longName": "GatewayTxAcknowledgment",
+          "fullName": "ttn.lorawan.v3.GatewayTxAcknowledgment",
+          "description": "",
+          "hasExtensions": false,
+          "hasFields": true,
+          "extensions": [],
+          "fields": [
+            {
+              "name": "tx_ack",
+              "description": "",
+              "label": "",
+              "type": "TxAcknowledgment",
+              "longType": "TxAcknowledgment",
+              "fullType": "ttn.lorawan.v3.TxAcknowledgment",
+              "ismap": false,
+              "defaultValue": ""
+            },
+            {
+              "name": "gateway_ids",
+              "description": "",
+              "label": "",
+              "type": "GatewayIdentifiers",
+              "longType": "GatewayIdentifiers",
+              "fullType": "ttn.lorawan.v3.GatewayIdentifiers",
+              "ismap": false,
+              "defaultValue": ""
+            }
+          ]
+        },
+        {
           "name": "GatewayUplinkMessage",
           "longName": "GatewayUplinkMessage",
           "fullName": "ttn.lorawan.v3.GatewayUplinkMessage",
@@ -23956,7 +23987,7 @@
           "fields": [
             {
               "name": "correlation_ids",
-              "description": "",
+              "description": "Correlation IDs for the downlink message.\nSet automatically by the UDP and LBS frontends.\nFor gRPC and the MQTT v3 frontends, the correlation IDs must match the ones of the downlink message the TxAck message refers to.",
               "label": "repeated",
               "type": "string",
               "longType": "string",
@@ -23989,6 +24020,16 @@
                   }
                 ]
               }
+            },
+            {
+              "name": "downlink_message",
+              "description": "Copy of the acknowledged downlink message. Set by the Gateway Server.\nFor the UDP and LBS frontends, the downlink token of the TxAck message is used.\nFor the gRPC and MQTT frontends, the correlation IDs are used.",
+              "label": "",
+              "type": "DownlinkMessage",
+              "longType": "DownlinkMessage",
+              "fullType": "ttn.lorawan.v3.DownlinkMessage",
+              "ismap": false,
+              "defaultValue": ""
             }
           ]
         },
@@ -24809,6 +24850,18 @@
               "requestType": "UplinkMessage",
               "requestLongType": "UplinkMessage",
               "requestFullType": "ttn.lorawan.v3.UplinkMessage",
+              "requestStreaming": false,
+              "responseType": "Empty",
+              "responseLongType": ".google.protobuf.Empty",
+              "responseFullType": "google.protobuf.Empty",
+              "responseStreaming": false
+            },
+            {
+              "name": "ReportTxAcknowledgment",
+              "description": "",
+              "requestType": "GatewayTxAcknowledgment",
+              "requestLongType": "GatewayTxAcknowledgment",
+              "requestFullType": "ttn.lorawan.v3.GatewayTxAcknowledgment",
               "requestStreaming": false,
               "responseType": "Empty",
               "responseLongType": ".google.protobuf.Empty",

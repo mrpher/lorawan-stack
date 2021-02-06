@@ -48,6 +48,7 @@ service AsNs {
 // The GsNs service connects a Gateway Server to a Network Server.
 service GsNs {
   rpc HandleUplink(UplinkMessage) returns (google.protobuf.Empty);
+  rpc ReportTxAcknowledgment(GatewayTxAcknowledgment) returns (google.protobuf.Empty);
 }
 
 // The NsEndDeviceRegistry service allows clients to manage their end devices on the Network Server.

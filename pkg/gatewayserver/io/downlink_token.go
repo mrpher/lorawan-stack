@@ -17,6 +17,9 @@ package io
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/mohae/deepcopy"
+	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
 )
 
 const downlinkTokenItems = 1 << 4
@@ -24,6 +27,7 @@ const downlinkTokenItems = 1 << 4
 type downlinkToken struct {
 	key            uint16
 	correlationIDs []string
+	msg            *ttnpb.DownlinkMessage
 	time           time.Time
 }
 
@@ -34,25 +38,28 @@ type DownlinkTokens struct {
 	items [downlinkTokenItems]downlinkToken
 }
 
-// Next returns a new downlink token.
-func (t *DownlinkTokens) Next(correlationIDs []string, time time.Time) uint16 {
+// Next returns a new downlink token for a downlink message.
+func (t *DownlinkTokens) Next(msg *ttnpb.DownlinkMessage, time time.Time) uint16 {
 	key := uint16(atomic.AddUint32(&t.last, 1))
 	pos := key % downlinkTokenItems
+
+	copied := deepcopy.Copy(msg).(*ttnpb.DownlinkMessage)
 	t.items[pos] = downlinkToken{
 		key:            key,
-		correlationIDs: correlationIDs,
+		correlationIDs: copied.CorrelationIDs,
+		msg:            copied, // store a copy of the downlink message
 		time:           time,
 	}
 	return key
 }
 
 // Get returns the correlation IDs and time difference between the time given to `Next` and the given time by the token.
-// If the token could not be found, this method returns false for `ok`.
-func (t DownlinkTokens) Get(token uint16, time time.Time) (correlationIDs []string, delta time.Duration, ok bool) {
+// If the token could not be found, this method returns false.
+func (t DownlinkTokens) Get(token uint16, time time.Time) (*ttnpb.DownlinkMessage, time.Duration, bool) {
 	pos := token % downlinkTokenItems
 	item := t.items[pos]
 	if item.key != token {
 		return nil, 0, false
 	}
-	return item.correlationIDs, time.Sub(item.time), true
+	return item.msg, time.Sub(item.time), true
 }

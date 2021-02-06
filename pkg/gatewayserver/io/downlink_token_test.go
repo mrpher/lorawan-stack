@@ -15,11 +15,12 @@
 package io
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/smartystreets/assertions"
+	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
+	"go.thethings.network/lorawan-stack/v3/pkg/util/test"
 	"go.thethings.network/lorawan-stack/v3/pkg/util/test/assertions/should"
 )
 
@@ -27,18 +28,20 @@ func TestDownlinkTokens(t *testing.T) {
 	a := assertions.New(t)
 	tokens := DownlinkTokens{}
 
+	msgs := make([]*ttnpb.DownlinkMessage, 0, downlinkTokenItems*2)
 	all := []uint16{}
 	for i := 0; i < downlinkTokenItems*2; i++ {
-		cids := []string{fmt.Sprintf("message_%d", i)}
-		all = append(all, tokens.Next(cids, time.Unix(int64(i), 0)))
+
+		msgs = append(msgs, ttnpb.NewPopulatedDownlinkMessage(test.Randy, true))
+		all = append(all, tokens.Next(msgs[i], time.Unix(int64(i), 0)))
 
 		for j, token := range all {
-			cids, delta, ok := tokens.Get(token, time.Unix(int64(i), 0))
+			msg, delta, ok := tokens.Get(token, time.Unix(int64(i), 0))
 			if i-j < downlinkTokenItems {
 				if !a.So(ok, should.BeTrue) {
 					t.FailNow()
 				}
-				a.So(cids, should.Resemble, []string{fmt.Sprintf("message_%d", j)})
+				a.So(msg, should.Resemble, msgs[j])
 				a.So(delta, should.Equal, time.Duration(i-j)*time.Second)
 			} else {
 				a.So(ok, should.BeFalse)

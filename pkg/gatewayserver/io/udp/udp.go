@@ -299,8 +299,9 @@ func (s *srv) handleUp(ctx context.Context, state *state, packet encoding.Packet
 			}
 		}
 		var rtt *time.Duration
-		if cids, delta, ok := state.tokens.Get(uint16(packet.Token[0])<<8|uint16(packet.Token[1]), packet.ReceivedAt); ok {
-			msg.TxAcknowledgment.CorrelationIDs = cids
+		if downlink, delta, ok := state.tokens.Get(uint16(packet.Token[0])<<8|uint16(packet.Token[1]), packet.ReceivedAt); ok {
+			msg.TxAcknowledgment.DownlinkMessage = downlink
+			msg.TxAcknowledgment.CorrelationIDs = downlink.CorrelationIDs
 			rtt = &delta
 		}
 		if err := state.io.HandleTxAck(msg.TxAcknowledgment); err != nil {
@@ -367,7 +368,7 @@ func (s *srv) handleDown(ctx context.Context, state *state) error {
 			}
 			write := func() {
 				logger.Debug("Write downlink message")
-				token := state.tokens.Next(down.CorrelationIDs, time.Now())
+				token := state.tokens.Next(down, time.Now())
 				packet.Token = [2]byte{byte(token >> 8), byte(token)}
 				if err := s.write(packet); err != nil {
 					logger.WithError(err).Warn("Failed to write downlink message")

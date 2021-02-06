@@ -25,6 +25,7 @@ import (
 	"go.thethings.network/lorawan-stack/v3/pkg/errors"
 	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
 	"go.thethings.network/lorawan-stack/v3/pkg/types"
+	"go.thethings.network/lorawan-stack/v3/pkg/util/test"
 	"go.thethings.network/lorawan-stack/v3/pkg/util/test/assertions/should"
 )
 
@@ -648,14 +649,15 @@ func TestTxAck(t *testing.T) {
 		Diid:    1,
 		RefTime: 0,
 	}
-	correlationIDs := []string{"i3N84kvunPAS8wOmiEKbhsP62wNMRdmn", "deK3h59wUZhR0xb17eumTkauGQxoB5xn"}
+	msg := ttnpb.NewPopulatedDownlinkMessage(test.Randy, true)
 	var lnsLNS lbsLNS
 	now := time.Now()
-	lnsLNS.tokens.Next(correlationIDs, time.Unix(int64(0), 0))
+	lnsLNS.tokens.Next(msg, time.Unix(int64(0), 0))
 	txAck := txConf.ToTxAck(context.Background(), lnsLNS.tokens, now)
 	if !a.So(txAck, should.Resemble, &ttnpb.TxAcknowledgment{
-		CorrelationIDs: correlationIDs,
-		Result:         ttnpb.TxAcknowledgment_SUCCESS,
+		DownlinkMessage: msg,
+		CorrelationIDs:  msg.CorrelationIDs,
+		Result:          ttnpb.TxAcknowledgment_SUCCESS,
 	}) {
 		t.Fatalf("Unexpected TxAck: %v", txAck)
 	}

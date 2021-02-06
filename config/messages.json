@@ -8360,6 +8360,24 @@
       "file": "observability.go"
     }
   },
+  "event:gs.down.tx.ack.drop": {
+    "translations": {
+      "en": "drop tx acknowledgment"
+    },
+    "description": {
+      "package": "pkg/gatewayserver",
+      "file": "observability.go"
+    }
+  },
+  "event:gs.down.tx.ack.forward": {
+    "translations": {
+      "en": "forward tx acknowledgment"
+    },
+    "description": {
+      "package": "pkg/gatewayserver",
+      "file": "observability.go"
+    }
+  },
   "event:gs.down.tx.fail": {
     "translations": {
       "en": "transmit downlink message failure"

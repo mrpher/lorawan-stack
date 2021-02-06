@@ -94,6 +94,15 @@ var (
 		events.WithVisibility(ttnpb.RIGHT_GATEWAY_TRAFFIC_READ),
 		events.WithDataType(ttnpb.TxAcknowledgment_COLLISION_PACKET),
 	)
+	evtTxAckForward = events.Define(
+		"gs.down.tx.ack.forward", "forward tx acknowledgment",
+		events.WithVisibility(ttnpb.RIGHT_GATEWAY_TRAFFIC_READ),
+	)
+	evtTxAckDrop = events.Define(
+		"gs.down.tx.ack.drop", "drop tx acknowledgment",
+		events.WithVisibility(ttnpb.RIGHT_GATEWAY_TRAFFIC_READ),
+		events.WithErrorDataType(),
+	)
 )
 
 const (
@@ -209,6 +218,22 @@ var gsMetrics = &messageMetrics{
 		},
 		[]string{protocol},
 	),
+	downlinkTxAckForwarded: metrics.NewContextualCounterVec(
+		prometheus.CounterOpts{
+			Subsystem: subsystem,
+			Name:      "downlink_tx_ack_forwarded_total",
+			Help:      "Total number of forwarded tx acknowledgments",
+		},
+		[]string{host, protocol},
+	),
+	downlinkTxAckDropped: metrics.NewContextualCounterVec(
+		prometheus.CounterOpts{
+			Subsystem: subsystem,
+			Name:      "downlink_tx_ack_dropped_total",
+			Help:      "Total number of dropped tx acknowledgments",
+		},
+		[]string{host, protocol, "error"},
+	),
 }
 
 func init() {
@@ -216,19 +241,21 @@ func init() {
 }
 
 type messageMetrics struct {
-	gatewaysConnected   *metrics.ContextualGaugeVec
-	upstreamHandlers    *metrics.ContextualGaugeVec
-	statusReceived      *metrics.ContextualCounterVec
-	statusForwarded     *metrics.ContextualCounterVec
-	statusDropped       *metrics.ContextualCounterVec
-	statusFailed        *metrics.ContextualCounterVec
-	uplinkReceived      *metrics.ContextualCounterVec
-	uplinkForwarded     *metrics.ContextualCounterVec
-	uplinkDropped       *metrics.ContextualCounterVec
-	uplinkFailed        *metrics.ContextualCounterVec
-	downlinkSent        *metrics.ContextualCounterVec
-	downlinkTxSucceeded *metrics.ContextualCounterVec
-	downlinkTxFailed    *metrics.ContextualCounterVec
+	gatewaysConnected      *metrics.ContextualGaugeVec
+	upstreamHandlers       *metrics.ContextualGaugeVec
+	statusReceived         *metrics.ContextualCounterVec
+	statusForwarded        *metrics.ContextualCounterVec
+	statusDropped          *metrics.ContextualCounterVec
+	statusFailed           *metrics.ContextualCounterVec
+	uplinkReceived         *metrics.ContextualCounterVec
+	uplinkForwarded        *metrics.ContextualCounterVec
+	uplinkDropped          *metrics.ContextualCounterVec
+	uplinkFailed           *metrics.ContextualCounterVec
+	downlinkSent           *metrics.ContextualCounterVec
+	downlinkTxSucceeded    *metrics.ContextualCounterVec
+	downlinkTxFailed       *metrics.ContextualCounterVec
+	downlinkTxAckForwarded *metrics.ContextualCounterVec
+	downlinkTxAckDropped   *metrics.ContextualCounterVec
 }
 
 func (m messageMetrics) Describe(ch chan<- *prometheus.Desc) {
@@ -245,6 +272,8 @@ func (m messageMetrics) Describe(ch chan<- *prometheus.Desc) {
 	m.downlinkSent.Describe(ch)
 	m.downlinkTxSucceeded.Describe(ch)
 	m.downlinkTxFailed.Describe(ch)
+	m.downlinkTxAckForwarded.Describe(ch)
+	m.downlinkTxAckDropped.Describe(ch)
 }
 
 func (m messageMetrics) Collect(ch chan<- prometheus.Metric) {
@@ -261,6 +290,8 @@ func (m messageMetrics) Collect(ch chan<- prometheus.Metric) {
 	m.downlinkSent.Collect(ch)
 	m.downlinkTxSucceeded.Collect(ch)
 	m.downlinkTxFailed.Collect(ch)
+	m.downlinkTxAckForwarded.Collect(ch)
+	m.downlinkTxAckDropped.Collect(ch)
 }
 
 func registerGatewayConnect(ctx context.Context, ids ttnpb.GatewayIdentifiers, protocol string) {
@@ -342,4 +373,18 @@ func registerSuccessDownlink(ctx context.Context, gtw *ttnpb.Gateway, protocol s
 func registerFailDownlink(ctx context.Context, gtw *ttnpb.Gateway, ack *ttnpb.TxAcknowledgment, protocol string) {
 	events.Publish(evtTxFailureDown.NewWithIdentifiersAndData(ctx, gtw, ack.Result))
 	gsMetrics.downlinkTxFailed.WithLabelValues(ctx, protocol).Inc()
+}
+
+func registerForwardTxAck(ctx context.Context, gtw *ttnpb.Gateway, ack *ttnpb.TxAcknowledgment, host, protocol string) {
+	events.Publish(evtTxAckForward.NewWithIdentifiersAndData(ctx, gtw, ack))
+	gsMetrics.downlinkTxAckForwarded.WithLabelValues(ctx, host, protocol).Inc()
+}
+
+func registerDropTxAck(ctx context.Context, gtw *ttnpb.Gateway, host, protocol string, err error) {
+	events.Publish(evtTxAckDrop.NewWithIdentifiersAndData(ctx, gtw, err))
+	if ttnErr, ok := errors.From(err); ok {
+		gsMetrics.downlinkTxAckDropped.WithLabelValues(ctx, host, protocol, ttnErr.FullName()).Inc()
+	} else {
+		gsMetrics.downlinkTxAckDropped.WithLabelValues(ctx, host, protocol, unknown).Inc()
+	}
 }

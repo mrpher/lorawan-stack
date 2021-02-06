@@ -73,7 +73,12 @@ func (s *srv) accept() error {
 
 		go func() {
 			ctx := log.NewContextWithFields(s.ctx, log.Fields("remote_addr", mqttConn.RemoteAddr().String()))
-			conn := &connection{server: s.server, mqtt: mqttConn, format: s.format}
+			conn := &connection{
+				server:    s.server,
+				mqtt:      mqttConn,
+				format:    s.format,
+				downlinks: io.NewMemoryDownlinksRegistry(),
+			}
 			if err := conn.setup(ctx); err != nil {
 				switch err {
 				case stdio.EOF, stdio.ErrUnexpectedEOF:
@@ -88,11 +93,12 @@ func (s *srv) accept() error {
 }
 
 type connection struct {
-	format  Format
-	server  io.Server
-	mqtt    mqttnet.Conn
-	session session.Session
-	io      *io.Connection
+	format    Format
+	server    io.Server
+	mqtt      mqttnet.Conn
+	session   session.Session
+	io        *io.Connection
+	downlinks io.DownlinksRegistry
 }
 
 func (*connection) Protocol() string            { return "mqtt" }
@@ -318,6 +324,12 @@ func (c *connection) deliver(pkt *packet.PublishPacket) {
 		if err != nil {
 			logger.WithError(err).Warn("Failed to unmarshal Tx acknowledgment message")
 			return
+		}
+		if ack.DownlinkMessage == nil {
+			down, ok := c.downlinks.Pop(ack.CorrelationIDs)
+			if ok {
+				ack.DownlinkMessage = down
+			}
 		}
 		if err := c.io.HandleTxAck(ack); err != nil {
 			logger.WithError(err).Warn("Failed to handle Tx acknowledgment message")

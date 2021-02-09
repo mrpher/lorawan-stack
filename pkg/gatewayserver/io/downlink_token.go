@@ -63,3 +63,20 @@ func (t DownlinkTokens) Get(token uint16, time time.Time) (*ttnpb.DownlinkMessag
 	}
 	return item.msg, time.Sub(item.time), true
 }
+
+// GetWithCorrelationIDs is like Get, but uses the correlation IDs instead of the downlink token.
+func (t DownlinkTokens) GetWithCorrelationIDs(cids []string, time time.Time) (*ttnpb.DownlinkMessage, time.Duration, bool) {
+nextItem:
+	for _, item := range t.items {
+		if len(cids) != len(item.correlationIDs) {
+			continue
+		}
+		for index, cid := range item.correlationIDs {
+			if cids[index] != cid {
+				continue nextItem
+			}
+		}
+		return item.msg, time.Sub(item.time), true
+	}
+	return nil, 0, false
+}

@@ -21,6 +21,7 @@ import (
 	"net"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"github.com/TheThingsIndustries/mystique/pkg/auth"
 	mqttlog "github.com/TheThingsIndustries/mystique/pkg/log"
@@ -74,10 +75,9 @@ func (s *srv) accept() error {
 		go func() {
 			ctx := log.NewContextWithFields(s.ctx, log.Fields("remote_addr", mqttConn.RemoteAddr().String()))
 			conn := &connection{
-				server:    s.server,
-				mqtt:      mqttConn,
-				format:    s.format,
-				downlinks: io.NewMemoryDownlinksRegistry(),
+				server: s.server,
+				mqtt:   mqttConn,
+				format: s.format,
 			}
 			if err := conn.setup(ctx); err != nil {
 				switch err {
@@ -93,12 +93,12 @@ func (s *srv) accept() error {
 }
 
 type connection struct {
-	format    Format
-	server    io.Server
-	mqtt      mqttnet.Conn
-	session   session.Session
-	io        *io.Connection
-	downlinks io.DownlinksRegistry
+	format  Format
+	server  io.Server
+	mqtt    mqttnet.Conn
+	session session.Session
+	io      *io.Connection
+	tokens  io.DownlinkTokens
 }
 
 func (*connection) Protocol() string            { return "mqtt" }
@@ -154,6 +154,7 @@ func (c *connection) setup(ctx context.Context) (err error) {
 			case <-ctx.Done():
 				return
 			case down := <-c.io.Down():
+				c.tokens.Next(down, time.Now())
 				buf, err := c.format.FromDownlink(down, c.io.Gateway().GatewayIdentifiers)
 				if err != nil {
 					logger.WithError(err).Warn("Failed to marshal downlink message")
@@ -326,8 +327,7 @@ func (c *connection) deliver(pkt *packet.PublishPacket) {
 			return
 		}
 		if ack.DownlinkMessage == nil {
-			down, ok := c.downlinks.Pop(ack.CorrelationIDs)
-			if ok {
+			if down, _, ok := c.tokens.GetWithCorrelationIDs(ack.GetCorrelationIDs(), time.Now()); ok {
 				ack.DownlinkMessage = down
 			}
 		}

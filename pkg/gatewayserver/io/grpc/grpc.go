@@ -59,14 +59,13 @@ type impl struct {
 	mqttConfigProvider   config.MQTTConfigProvider
 	mqttv2ConfigProvider config.MQTTConfigProvider
 
-	downlinks io.DownlinksRegistry
+	tokens io.DownlinkTokens
 }
 
 // New returns a new gRPC frontend.
 func New(server io.Server, opts ...Option) ttnpb.GtwGsServer {
 	i := &impl{
-		server:    server,
-		downlinks: io.NewMemoryDownlinksRegistry(),
+		server: server,
 	}
 	for _, opt := range opts {
 		opt.apply(i)
@@ -139,8 +138,7 @@ func (s *impl) LinkGateway(link ttnpb.GtwGs_LinkGatewayServer) error {
 			}
 			if msg.TxAcknowledgment != nil {
 				if msg.TxAcknowledgment.DownlinkMessage == nil {
-					down, ok := s.downlinks.Pop(msg.TxAcknowledgment.CorrelationIDs)
-					if ok {
+					if down, _, ok := s.tokens.GetWithCorrelationIDs(msg.TxAcknowledgment.GetCorrelationIDs(), time.Now()); ok {
 						msg.TxAcknowledgment.DownlinkMessage = down
 					}
 				}
@@ -159,7 +157,7 @@ func (s *impl) LinkGateway(link ttnpb.GtwGs_LinkGatewayServer) error {
 			msg := &ttnpb.GatewayDown{
 				DownlinkMessage: down,
 			}
-			s.downlinks.Push(down)
+			s.tokens.Next(down, time.Now())
 			logger.Info("Send downlink message")
 			if err := link.Send(msg); err != nil {
 				logger.WithError(err).Warn("Failed to send message")

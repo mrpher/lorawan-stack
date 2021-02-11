@@ -163,15 +163,13 @@ message TxAcknowledgment {
   }
   Result result = 2 [(validate.rules).enum.defined_only = true];
 
-  // Copy of the acknowledged downlink message. Set by the Gateway Server.
-  // For the UDP and LBS frontends, the downlink token of the TxAck message is used.
-  // For the gRPC and MQTT frontends, the correlation IDs are used.
+  // Copy of the acknowledged downlink message. Set by the frontend before forwarding to the Gateway Server.
   DownlinkMessage downlink_message = 3;
 }
 
 message GatewayTxAcknowledgment {
-  TxAcknowledgment tx_ack = 1;
-  GatewayIdentifiers gateway_ids = 2 [(gogoproto.customname) = "GatewayIDs"];
+  GatewayIdentifiers gateway_ids = 1 [(gogoproto.customname) = "GatewayIDs"];
+  TxAcknowledgment tx_ack = 2;
 }
 
 message GatewayUplinkMessage {

@@ -341,31 +341,6 @@ func (dst *TxAcknowledgment) SetFields(src *TxAcknowledgment, paths ...string) e
 func (dst *GatewayTxAcknowledgment) SetFields(src *GatewayTxAcknowledgment, paths ...string) error {
 	for name, subs := range _processPaths(paths) {
 		switch name {
-		case "tx_ack":
-			if len(subs) > 0 {
-				var newDst, newSrc *TxAcknowledgment
-				if (src == nil || src.TxAck == nil) && dst.TxAck == nil {
-					continue
-				}
-				if src != nil {
-					newSrc = src.TxAck
-				}
-				if dst.TxAck != nil {
-					newDst = dst.TxAck
-				} else {
-					newDst = &TxAcknowledgment{}
-					dst.TxAck = newDst
-				}
-				if err := newDst.SetFields(newSrc, subs...); err != nil {
-					return err
-				}
-			} else {
-				if src != nil {
-					dst.TxAck = src.TxAck
-				} else {
-					dst.TxAck = nil
-				}
-			}
 		case "gateway_ids":
 			if len(subs) > 0 {
 				var newDst, newSrc *GatewayIdentifiers
@@ -389,6 +364,31 @@ func (dst *GatewayTxAcknowledgment) SetFields(src *GatewayTxAcknowledgment, path
 					dst.GatewayIDs = src.GatewayIDs
 				} else {
 					dst.GatewayIDs = nil
+				}
+			}
+		case "tx_ack":
+			if len(subs) > 0 {
+				var newDst, newSrc *TxAcknowledgment
+				if (src == nil || src.TxAck == nil) && dst.TxAck == nil {
+					continue
+				}
+				if src != nil {
+					newSrc = src.TxAck
+				}
+				if dst.TxAck != nil {
+					newDst = dst.TxAck
+				} else {
+					newDst = &TxAcknowledgment{}
+					dst.TxAck = newDst
+				}
+				if err := newDst.SetFields(newSrc, subs...); err != nil {
+					return err
+				}
+			} else {
+				if src != nil {
+					dst.TxAck = src.TxAck
+				} else {
+					dst.TxAck = nil
 				}
 			}
 

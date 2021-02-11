@@ -23849,22 +23849,22 @@
           "extensions": [],
           "fields": [
             {
-              "name": "tx_ack",
-              "description": "",
-              "label": "",
-              "type": "TxAcknowledgment",
-              "longType": "TxAcknowledgment",
-              "fullType": "ttn.lorawan.v3.TxAcknowledgment",
-              "ismap": false,
-              "defaultValue": ""
-            },
-            {
               "name": "gateway_ids",
               "description": "",
               "label": "",
               "type": "GatewayIdentifiers",
               "longType": "GatewayIdentifiers",
               "fullType": "ttn.lorawan.v3.GatewayIdentifiers",
+              "ismap": false,
+              "defaultValue": ""
+            },
+            {
+              "name": "tx_ack",
+              "description": "",
+              "label": "",
+              "type": "TxAcknowledgment",
+              "longType": "TxAcknowledgment",
+              "fullType": "ttn.lorawan.v3.TxAcknowledgment",
               "ismap": false,
               "defaultValue": ""
             }
@@ -24023,7 +24023,7 @@
             },
             {
               "name": "downlink_message",
-              "description": "Copy of the acknowledged downlink message. Set by the Gateway Server.\nFor the UDP and LBS frontends, the downlink token of the TxAck message is used.\nFor the gRPC and MQTT frontends, the correlation IDs are used.",
+              "description": "Copy of the acknowledged downlink message. Set by the frontend before forwarding to the Gateway Server.",
               "label": "",
               "type": "DownlinkMessage",
               "longType": "DownlinkMessage",

@@ -501,24 +501,24 @@ func (m *GatewayTxAcknowledgment) ValidateFields(paths ...string) error {
 	for name, subs := range _processPaths(append(paths[:0:0], paths...)) {
 		_ = subs
 		switch name {
-		case "tx_ack":
-
-			if v, ok := interface{}(m.GetTxAck()).(interface{ ValidateFields(...string) error }); ok {
-				if err := v.ValidateFields(subs...); err != nil {
-					return GatewayTxAcknowledgmentValidationError{
-						field:  "tx_ack",
-						reason: "embedded message failed validation",
-						cause:  err,
-					}
-				}
-			}
-
 		case "gateway_ids":
 
 			if v, ok := interface{}(m.GetGatewayIDs()).(interface{ ValidateFields(...string) error }); ok {
 				if err := v.ValidateFields(subs...); err != nil {
 					return GatewayTxAcknowledgmentValidationError{
 						field:  "gateway_ids",
+						reason: "embedded message failed validation",
+						cause:  err,
+					}
+				}
+			}
+
+		case "tx_ack":
+
+			if v, ok := interface{}(m.GetTxAck()).(interface{ ValidateFields(...string) error }); ok {
+				if err := v.ValidateFields(subs...); err != nil {
+					return GatewayTxAcknowledgmentValidationError{
+						field:  "tx_ack",
 						reason: "embedded message failed validation",
 						cause:  err,
 					}

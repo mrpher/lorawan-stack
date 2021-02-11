@@ -103,6 +103,10 @@ This is a checklist for releases. This is filled in by both the releaser and the
   $ git push origin ${version}
   ```
 
+#### Update Documentation
+
+- [ ] Complete the [documentation release checklist](https://github.com/TheThingsIndustries/lorawan-stack-docs/blob/master/.github/ISSUE_TEMPLATE/release.md).
+
 #### Post Release
 
 - [ ] Edit the release notes on the Github releases page, which is typically copied from `CHANGELOG.md`.
@@ -118,3 +122,4 @@ This is a checklist for releases. This is filled in by both the releaser and the
 
 - [ ] The new release contains only the intended commits. This can be checked using `https://github.com/TheThingsNetwork/lorawan-stack/compare/v<previous-version>...v<current-version>`
 - [ ] The Docker latest tag is up to date.
+- [ ] A pull request has been created following the [documentation release checklist](https://github.com/TheThingsIndustries/lorawan-stack-docs/blob/master/.github/ISSUE_TEMPLATE/release.md).

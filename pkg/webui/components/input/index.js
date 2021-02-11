@@ -245,7 +245,7 @@ class Input extends React.Component {
   }
 }
 
-const Valid = function(props) {
+const Valid = function (props) {
   const classname = classnames(style.valid, {
     [style.show]: props.show,
   })

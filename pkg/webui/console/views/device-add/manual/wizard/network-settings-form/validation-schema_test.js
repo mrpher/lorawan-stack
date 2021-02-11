@@ -57,12 +57,17 @@ describe('<NetworkSettingsForm /> validation schema', () => {
       },
     })
 
-  const validateMulticast = baseSchema =>
-    validationSchema.validateSync(createMulticastSchema(baseSchema), {
-      context: {
-        activationMode: ACTIVATION_MODES.MULTICAST,
-      },
-    })
+  const validateMulticast = baseSchema => {
+    try {
+      return validationSchema.validateSync(createMulticastSchema(baseSchema), {
+        context: {
+          activationMode: ACTIVATION_MODES.MULTICAST,
+        },
+      })
+    } catch (err) {
+      console.log(err)
+    }
+  }
 
   const validateNone = baseSchema =>
     validationSchema.validateSync(createNoneSchema(baseSchema), {

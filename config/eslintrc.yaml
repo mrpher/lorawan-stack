@@ -120,6 +120,10 @@ rules:
     - warn
     - maxSize: 400
 
+  jest/no-conditional-expect: off
+  jest/no-try-expect: off
+  jest/no-done-callback: off
+
   # Change to `error` after https://github.com/TheThingsNetwork/lorawan-stack/issues/1086
   # is resolved.
 
@@ -168,6 +172,10 @@ rules:
       singleReturnOnly: false
       classPropertiesAllowed: false
       allowStandaloneDeclarations: false
+
+  arrow-body-style:
+    - warn
+    - as-needed
 
 # Overwrite jest's expect rules for cypress test files, which uses a different
 # assertion syntax.

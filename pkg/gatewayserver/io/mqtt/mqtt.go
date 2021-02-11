@@ -154,7 +154,9 @@ func (c *connection) setup(ctx context.Context) (err error) {
 			case <-ctx.Done():
 				return
 			case down := <-c.io.Down():
-				c.tokens.Next(down, time.Now())
+				token := c.tokens.Next(down, time.Now())
+				down.CorrelationIDs = append(down.CorrelationIDs, c.tokens.FormatCorrelationID(token))
+
 				buf, err := c.format.FromDownlink(down, c.io.Gateway().GatewayIdentifiers)
 				if err != nil {
 					logger.WithError(err).Warn("Failed to marshal downlink message")
@@ -327,8 +329,10 @@ func (c *connection) deliver(pkt *packet.PublishPacket) {
 			return
 		}
 		if ack.DownlinkMessage == nil {
-			if down, _, ok := c.tokens.GetWithCorrelationIDs(ack.GetCorrelationIDs(), time.Now()); ok {
-				ack.DownlinkMessage = down
+			if token, ok := c.tokens.ParseTokenFromCorrelationIDs(ack.GetCorrelationIDs()); ok {
+				if down, _, ok := c.tokens.Get(token, time.Now()); ok {
+					ack.DownlinkMessage = down
+				}
 			}
 		}
 		if err := c.io.HandleTxAck(ack); err != nil {

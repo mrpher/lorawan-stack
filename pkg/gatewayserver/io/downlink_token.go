@@ -15,20 +15,22 @@
 package io
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/mohae/deepcopy"
 	"go.thethings.network/lorawan-stack/v3/pkg/ttnpb"
 )
 
 const downlinkTokenItems = 1 << 4
 
 type downlinkToken struct {
-	key            uint16
-	correlationIDs []string
-	msg            *ttnpb.DownlinkMessage
-	time           time.Time
+	key  uint16
+	msg  *ttnpb.DownlinkMessage
+	time time.Time
 }
 
 // DownlinkTokens stores a set of downlink tokens and can be used to track roundtrip time.
@@ -43,12 +45,10 @@ func (t *DownlinkTokens) Next(msg *ttnpb.DownlinkMessage, time time.Time) uint16
 	key := uint16(atomic.AddUint32(&t.last, 1))
 	pos := key % downlinkTokenItems
 
-	copied := deepcopy.Copy(msg).(*ttnpb.DownlinkMessage)
 	t.items[pos] = downlinkToken{
-		key:            key,
-		correlationIDs: copied.CorrelationIDs,
-		msg:            copied, // store a copy of the downlink message
-		time:           time,
+		key:  key,
+		msg:  msg,
+		time: time,
 	}
 	return key
 }
@@ -64,19 +64,25 @@ func (t DownlinkTokens) Get(token uint16, time time.Time) (*ttnpb.DownlinkMessag
 	return item.msg, time.Sub(item.time), true
 }
 
-// GetWithCorrelationIDs is like Get, but uses the correlation IDs instead of the downlink token.
-func (t DownlinkTokens) GetWithCorrelationIDs(cids []string, time time.Time) (*ttnpb.DownlinkMessage, time.Duration, bool) {
-nextItem:
-	for _, item := range t.items {
-		if len(cids) != len(item.correlationIDs) {
+var parseTokenRegex = regexp.MustCompile(`^gs:down:token:(\d+)$`)
+
+// FormatCorrelationID formats a correlation ID for a downlink token.
+func (t DownlinkTokens) FormatCorrelationID(token uint16) string {
+	return fmt.Sprintf("gs:down:token:%d", token)
+}
+
+// ParseTokenFromCorrelationIDs parses the correlation ID
+func (t DownlinkTokens) ParseTokenFromCorrelationIDs(cids []string) (uint16, bool) {
+	for _, cid := range cids {
+		match := parseTokenRegex.FindString(cid)
+		if match == "" {
 			continue
 		}
-		for index, cid := range item.correlationIDs {
-			if cids[index] != cid {
-				continue nextItem
-			}
+		token, err := strconv.ParseUint(strings.TrimPrefix(match, "gs:down:token:"), 10, 16)
+		if err != nil {
+			return 0, false
 		}
-		return item.msg, time.Sub(item.time), true
+		return uint16(token), true
 	}
-	return nil, 0, false
+	return 0, false
 }

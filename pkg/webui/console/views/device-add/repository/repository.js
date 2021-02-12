@@ -54,7 +54,7 @@ import reducer, {
   hasAnySelectedOther,
   hasCompletedSelection,
 } from './reducer'
-import validationSchema, { initialValues } from './validation-schema'
+import validationSchema, { initialValues, devEUISchema } from './validation-schema'
 
 import style from './repository.styl'
 
@@ -67,6 +67,19 @@ const m = defineMessages({
   createSuccess: 'End device registered',
   register: 'Register from The LoRaWAN Device Repository',
 })
+
+const generateDeviceId = (device = {}) => {
+  const { ids: idsValues = {} } = device
+
+  try {
+    devEUISchema.validateSync(idsValues.dev_eui)
+    return idsValues.dev_eui.toLowerCase()
+  } catch (e) {
+    // We dont want to use invalid `dev_eui` as `device_id`.
+  }
+
+  return initialValues.ids.device_id || ''
+}
 
 const stateToFormValues = state => ({
   ...initialValues,
@@ -154,6 +167,7 @@ const DeviceRepository = props => {
               message: m.createSuccess,
             })
             resetForm({
+              errors: {},
               values: {
                 ...castedValues,
                 ...initialValues,
@@ -177,6 +191,17 @@ const DeviceRepository = props => {
     },
     [appId, createDevice, createDeviceSuccess, handleSetError, validationContext],
   )
+
+  const handleIdPrefill = React.useCallback(() => {
+    if (formRef.current) {
+      const { values, errors, setFieldValue } = formRef.current
+
+      const generatedId = generateDeviceId(values, errors)
+      if (generatedId !== values.ids.device_id) {
+        setFieldValue('ids.device_id', generatedId)
+      }
+    }
+  }, [])
 
   const hasSelectedOther = hasAnySelectedOther(state)
   const hasCompleted = hasCompletedSelection(state)
@@ -264,6 +289,7 @@ const DeviceRepository = props => {
                 fetching={templateFetching}
                 prefixes={prefixes}
                 mayEditKeys={mayEditKeys}
+                onIdPrefill={handleIdPrefill}
               />
             ) : (
               <Message content={m.enterDataDescription} component="p" />

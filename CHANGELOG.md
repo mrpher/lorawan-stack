@@ -11,6 +11,8 @@ For details about compatibility between different releases, see the **Commitment
 
 ### Added
 
+- End device ID generation based on DevEUI in The LoRaWAN Device Repository creation form in the Console.
+
 ### Changed
 
 ### Deprecated

@@ -74,6 +74,7 @@ class FormField extends React.Component {
     glossaryId: PropTypes.string,
     glossaryTerm: PropTypes.message,
     name: PropTypes.string.isRequired,
+    onBlur: PropTypes.func,
     onChange: PropTypes.func,
     readOnly: PropTypes.bool,
     required: PropTypes.bool,
@@ -87,6 +88,7 @@ class FormField extends React.Component {
     encode: value => value,
     decode: value => value,
     onChange: () => null,
+    onBlur: () => null,
     warning: '',
     description: '',
     glossaryTerm: '',
@@ -148,12 +150,16 @@ class FormField extends React.Component {
 
   @bind
   handleBlur(event) {
-    const { name } = this.props
+    const { name, onBlur } = this.props
     const { validateOnBlur, setFieldTouched } = this.context
 
     if (validateOnBlur) {
       const value = this.extractValue(event)
       setFieldTouched(name, !isValueEmpty(value))
+    }
+
+    if (onBlur) {
+      onBlur(event)
     }
   }
 

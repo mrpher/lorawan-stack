@@ -45,9 +45,7 @@ const csrf = selectCSRFToken()
 const instance = axios.create()
 
 instance.interceptors.response.use(
-  response => {
-    return response
-  },
+  response => response,
   error => {
     if ('response' in error && error.response && 'data' in error.response) {
       throw error.response.data

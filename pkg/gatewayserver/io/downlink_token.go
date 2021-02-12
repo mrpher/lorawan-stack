@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -74,11 +73,11 @@ func (t DownlinkTokens) FormatCorrelationID(token uint16) string {
 // ParseTokenFromCorrelationIDs parses the correlation ID
 func (t DownlinkTokens) ParseTokenFromCorrelationIDs(cids []string) (uint16, bool) {
 	for _, cid := range cids {
-		match := parseTokenRegex.FindString(cid)
-		if match == "" {
+		matches := parseTokenRegex.FindStringSubmatch(cid)
+		if len(matches) != 2 || matches[1] == "" {
 			continue
 		}
-		token, err := strconv.ParseUint(strings.TrimPrefix(match, "gs:down:token:"), 10, 16)
+		token, err := strconv.ParseUint(matches[1], 10, 16)
 		if err != nil {
 			return 0, false
 		}

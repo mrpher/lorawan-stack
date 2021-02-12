@@ -49,3 +49,18 @@ func TestDownlinkTokens(t *testing.T) {
 		}
 	}
 }
+
+func TestCorrelationIDs(t *testing.T) {
+	tokens := DownlinkTokens{}
+
+	token := tokens.Next(ttnpb.NewPopulatedDownlinkMessage(test.Randy, true), time.Now())
+	cid := tokens.FormatCorrelationID(token)
+	parsedToken, ok := tokens.ParseTokenFromCorrelationIDs([]string{"cid:before", cid, "cid:after"})
+
+	a := assertions.New(t)
+	a.So(ok, should.BeTrue)
+	a.So(parsedToken, should.Equal, token)
+
+	_, ok = tokens.ParseTokenFromCorrelationIDs([]string{"cid1", "cid2"})
+	a.So(ok, should.BeFalse)
+}

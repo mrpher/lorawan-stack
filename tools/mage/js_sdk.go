@@ -51,6 +51,7 @@ func (k JsSDK) Deps() error {
 	if mg.Verbose() {
 		fmt.Println("Installing JS SDK dependencies")
 	}
+	mg.Deps(Js.deps)
 	return k.runYarnV("install", "--no-progress", "--production=false")
 }
 

@@ -128,6 +128,13 @@ func (Js) isProductionMode() bool {
 	}
 }
 
+func (js Js) deps() error {
+	if mg.Verbose() {
+		fmt.Println("Installing JS dependencies")
+	}
+	return runYarn("install", "--no-progress", "--production=false")
+}
+
 // Deps installs the javascript dependencies.
 func (js Js) Deps() error {
 	ok, err := target.Dir(
@@ -168,10 +175,7 @@ func (js Js) Deps() error {
 			return fmt.Errorf("failed to link JS SDK: %w", err)
 		}
 	}
-	if mg.Verbose() {
-		fmt.Println("Installing JS dependencies")
-	}
-	return runYarn("install", "--no-progress", "--production=false")
+	return js.deps()
 }
 
 // BuildDll runs the webpack command to build the DLL bundle

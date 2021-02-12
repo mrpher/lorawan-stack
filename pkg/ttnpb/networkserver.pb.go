@@ -397,7 +397,9 @@ var _AsNs_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type GsNsClient interface {
+	// HandleUplink forwards an uplink message to the Network Server.
 	HandleUplink(ctx context.Context, in *UplinkMessage, opts ...grpc.CallOption) (*types.Empty, error)
+	// ReportTxAcknowledgment forwards a TxAcknowledgment packet to the Network Server.
 	ReportTxAcknowledgment(ctx context.Context, in *GatewayTxAcknowledgment, opts ...grpc.CallOption) (*types.Empty, error)
 }
 
@@ -429,7 +431,9 @@ func (c *gsNsClient) ReportTxAcknowledgment(ctx context.Context, in *GatewayTxAc
 
 // GsNsServer is the server API for GsNs service.
 type GsNsServer interface {
+	// HandleUplink forwards an uplink message to the Network Server.
 	HandleUplink(context.Context, *UplinkMessage) (*types.Empty, error)
+	// ReportTxAcknowledgment forwards a TxAcknowledgment packet to the Network Server.
 	ReportTxAcknowledgment(context.Context, *GatewayTxAcknowledgment) (*types.Empty, error)
 }
 

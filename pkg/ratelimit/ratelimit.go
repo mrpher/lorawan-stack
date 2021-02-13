@@ -1,4 +1,4 @@
-// Copyright © 2020 The Things Network Foundation, The Things Industries B.V.
+// Copyright © 2021 The Things Network Foundation, The Things Industries B.V.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 type RateLimiter interface {
 	Wait(id string) *Metadata
 	WaitMaxDuration(id string, maxDuration time.Duration) (*Metadata, bool)
+	WaitMaxDurationWithRate(id string, maxDuration time.Duration, f func() uint64) (*Metadata, bool)
 }
 
 // noopRateLimiter does not enforce any rate limits.
@@ -37,6 +38,11 @@ func (*noopRateLimiter) Wait(string) *Metadata {
 
 // WaitMaxDuration implements the RateLimiter interface.
 func (*noopRateLimiter) WaitMaxDuration(string, time.Duration) (*Metadata, bool) {
+	return &Metadata{}, true
+}
+
+// WaitMaxDurationWithRate implements the RateLimiter interface.
+func (*noopRateLimiter) WaitMaxDurationWithRate(string, time.Duration, func() uint64) (*Metadata, bool) {
 	return &Metadata{}, true
 }
 
@@ -62,50 +68,56 @@ func (c Config) New() RateLimiter {
 	}
 }
 
-func (r *Registry) getOrCreate(id string, createFunc func() *ratelimit.Bucket) *ratelimit.Bucket {
+func (r *Registry) getOrCreate(id string, createFunc func(uint64) *ratelimit.Bucket, rateFunc func() uint64) *ratelimit.Bucket {
 	r.mu.RLock()
 	limiter, ok := r.entities[id]
 	r.mu.RUnlock()
 	if ok {
 		return limiter
 	}
-	limiter = createFunc()
+	limiter = createFunc(rateFunc())
 	r.mu.Lock()
 	r.entities[id] = limiter
 	r.mu.Unlock()
 	return limiter
 }
 
-func (r *Registry) newFunc() *ratelimit.Bucket {
-	return ratelimit.NewBucketWithQuantum(r.per, int64(r.rate), int64(r.rate))
+func (r *Registry) createFunc(rate uint64) *ratelimit.Bucket {
+	return ratelimit.NewBucketWithQuantum(r.per, int64(rate), int64(rate))
 }
 
 // Wait returns the time to wait until available
 func (r *Registry) Wait(id string) *Metadata {
-	b := r.getOrCreate(id, r.newFunc)
+	b := r.getOrCreate(id, r.createFunc, func() uint64 { return r.rate })
 	t := b.Take(1)
+
 	return &Metadata{
 		Wait:         t,
 		ResetSeconds: r.resetSeconds,
 		Available:    b.Available(),
-		Limit:        int64(r.rate),
+		Limit:        int64(b.Rate()),
 	}
 }
 
-// WaitMaxDuration returns the time to wait until available, but with a max.
-func (r *Registry) WaitMaxDuration(id string, max time.Duration) (*Metadata, bool) {
-	b := r.getOrCreate(id, r.newFunc)
+// WaitMaxDurationWithRate returns the time to wait until available, but with a maximum duration to wait.
+func (r *Registry) WaitMaxDurationWithRate(id string, max time.Duration, rate func() uint64) (*Metadata, bool) {
+	b := r.getOrCreate(id, r.createFunc, rate)
 	t, ok := b.TakeMaxDuration(1, max)
 	if !ok {
 		return &Metadata{
 			ResetSeconds: r.resetSeconds,
-			Limit:        int64(r.rate),
+			Limit:        int64(b.Rate()),
 		}, false
 	}
 	return &Metadata{
 		Wait:         t,
 		ResetSeconds: r.resetSeconds,
 		Available:    b.Available(),
-		Limit:        int64(r.rate),
+		Limit:        int64(b.Rate()),
 	}, true
+}
+
+// WaitMaxDuration returns the time to wait until available, but with a maximum duration to wait. The default rate limit is enforced.
+func (r *Registry) WaitMaxDuration(id string, max time.Duration) (*Metadata, bool) {
+	return r.WaitMaxDurationWithRate(id, max, func() uint64 { return r.rate })
 }

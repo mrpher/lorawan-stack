@@ -1,4 +1,4 @@
-// Copyright © 2020 The Things Network Foundation, The Things Industries B.V.
+// Copyright © 2021 The Things Network Foundation, The Things Industries B.V.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package ratelimit
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -37,6 +38,9 @@ type GrpcKeyFunc func(ctx context.Context, fullMethod string) string
 // tokens to become available.
 type GrpcMaxWaitFunc func(ctx context.Context, fullMethod string) time.Duration
 
+// GrpcRateFunc returns the rate at which tokens to become available.
+type GrpcRateFunc func(ctx context.Context, fullMethod string) uint64
+
 // GrpcRemoteIP is a GrpcKeyFunc that rate limits requests based on the remote IP address.
 // Returns an empty string if request is coming from a cluster peer (TODO: Is this desired behaviour?)
 func GrpcRemoteIP(ctx context.Context, fullMethod string) string {
@@ -50,6 +54,12 @@ func GrpcRemoteIP(ctx context.Context, fullMethod string) string {
 		}
 	}
 	return ""
+}
+
+// GrpcRemoteIPAndMethod is a GrpcKeyFunc that rate limits requests based on the remote IP address and the method name.
+// Returns an empty string if request is coming from a cluster peer (TODO: Is this desired behaviour?)
+func GrpcRemoteIPAndMethod(ctx context.Context, fullMethod string) string {
+	return fmt.Sprintf("ip:%s:method:%s", GrpcRemoteIP(ctx, fullMethod), fullMethod)
 }
 
 // GrpcAuthID is a GrpcKeyFunc that rate limits requests based on the authentication token ID.
@@ -72,16 +82,25 @@ func GrpcMaxWait(t time.Duration) GrpcMaxWaitFunc {
 	}
 }
 
+// GrpcRateLimits is a GrpcRateFunc with a default rate limit and overrides for specific methods.
+func GrpcRateLimits(c Config) GrpcRateFunc {
+	return func(_ context.Context, fullMethod string) uint64 {
+		if rate, ok := c.Overrides[fullMethod]; ok {
+			return rate
+		}
+		return c.Rate
+	}
+}
+
 var (
 	errRateLimitExceeded = errors.DefineResourceExhausted("rate_limit_exceeded", "rate limit exceeded")
 )
 
 // GrpcUnaryServerInterceptor returns a gRPC unary server interceptor that rate limits gRPC calls.
-func GrpcUnaryServerInterceptor(c Config, keyFunc GrpcKeyFunc, waitFunc GrpcMaxWaitFunc) grpc.UnaryServerInterceptor {
-	l := c.New()
+func GrpcUnaryServerInterceptor(l RateLimiter, keyFunc GrpcKeyFunc, waitFunc GrpcMaxWaitFunc, rateFunc GrpcRateFunc) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		if key := keyFunc(ctx, info.FullMethod); key != "" {
-			md, ok := l.WaitMaxDuration(key, waitFunc(ctx, info.FullMethod))
+			md, ok := l.WaitMaxDurationWithRate(key, waitFunc(ctx, info.FullMethod), func() uint64 { return rateFunc(ctx, info.FullMethod) })
 			grpc.SetHeader(ctx, metadata.Pairs(
 				"x-rate-limit-limit", strconv.FormatInt(md.Limit, 10),
 				"x-rate-limit-available", strconv.FormatInt(md.Available, 10),

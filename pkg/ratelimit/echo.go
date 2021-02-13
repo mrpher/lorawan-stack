@@ -1,4 +1,4 @@
-// Copyright © 2020 The Things Network Foundation, The Things Industries B.V.
+// Copyright © 2021 The Things Network Foundation, The Things Industries B.V.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package ratelimit
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -26,7 +27,7 @@ type EchoKeyFunc func(c echo.Context) string
 
 // EchoPathAndIP is an EchoKeyFunc that uses the path of the request URL and the real IP address as key.
 func EchoPathAndIP(c echo.Context) string {
-	return c.Request().URL.Path + c.RealIP()
+	return fmt.Sprintf("path:%s:from:%s", c.Request().URL.Path, c.RealIP())
 }
 
 // EchoMiddleware returns an Echo middleware function that rate limits HTTP requests.

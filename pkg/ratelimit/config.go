@@ -14,8 +14,12 @@
 
 package ratelimit
 
+import "time"
+
 // Config represents configuration for rate limiting.
 type Config struct {
-	Enable bool   `name:"enable" description:"Enable rate limits"`
-	Rate   uint32 `name:"rate" description:"Maximum allowed rate per second"`
+	Enable    bool              `name:"enable" description:"Enable rate limits"`
+	Rate      uint64            `name:"rate" description:"Maximum allowed rate per second"`
+	MaxWait   time.Duration     `name:"max-wait" description:"Maximum time to wait for rate limiting"`
+	Overrides map[string]uint64 `name:"overrides" description:"Override rate limits"`
 }

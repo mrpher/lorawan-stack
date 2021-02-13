@@ -180,7 +180,12 @@ func New(ctx context.Context, opts ...Option) *Server {
 		metrics.UnaryServerInterceptor,
 		errors.UnaryServerInterceptor(),
 		// NOTE: All middleware that works with lorawan-stack/pkg/errors errors must be placed below.
-		ratelimit.GrpcUnaryServerInterceptor(options.rateLimitingConfig.ByRemoteIP, ratelimit.GrpcRemoteIP, ratelimit.GrpcMaxWait(time.Second)),
+		ratelimit.GrpcUnaryServerInterceptor(
+			options.rateLimitingConfig.ByRemoteIP.New(),
+			ratelimit.GrpcRemoteIPAndMethod,
+			ratelimit.GrpcMaxWait(options.rateLimitingConfig.ByRemoteIP.MaxWait),
+			ratelimit.GrpcRateLimits(options.rateLimitingConfig.ByRemoteIP),
+		),
 		sentrymiddleware.UnaryServerInterceptor(),
 		grpc_recovery.UnaryServerInterceptor(recoveryOpts...),
 		validator.UnaryServerInterceptor(),

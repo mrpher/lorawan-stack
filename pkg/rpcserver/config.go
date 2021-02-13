@@ -16,7 +16,8 @@ package rpcserver
 
 import "go.thethings.network/lorawan-stack/v3/pkg/ratelimit"
 
-// RateLimitingConfig represents rate limiting configuration for the gRPC listener.
+// RateLimitingConfig represents rate limiting configurations for the gRPC listener.
 type RateLimitingConfig struct {
 	ByRemoteIP ratelimit.Config `name:"by-remote-ip" description:"Rate limit by remote IP address"`
+	Stream     ratelimit.Config `name:"stream" description:"Rate limit streams"`
 }

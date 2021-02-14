@@ -16,7 +16,9 @@ package ratelimit_test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	pbtypes "github.com/gogo/protobuf/types"
 	"github.com/smartystreets/assertions"
@@ -30,9 +32,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const (
-	maxRate      = 10
-	overrideRate = 15
+var (
+	maxRate      uint64 = 10
+	overrideRate uint64 = 15
+
+	timeout = (1 << 5) * test.Delay
 )
 
 func TestGRPC(t *testing.T) {
@@ -44,13 +48,17 @@ func TestGRPC(t *testing.T) {
 				"/ttn.lorawan.v3.GtwGs/GetMQTTConnectionInfo": overrideRate,
 			},
 		},
+		Stream: ratelimit.Config{
+			Enable: true,
+			Rate:   maxRate,
+		},
 	}
 
-	withRateLimitedGRPCServer(rpcserver.RateLimitingConfig{}, func(client ttnpb.GtwGsClient) {
+	withRateLimitedGRPCServer(rpcserver.RateLimitingConfig{}, func(server *mockServer, client ttnpb.GtwGsClient) {
 		t.Run("NoRateLimit", func(t *testing.T) {
 			t.Run("Invoke", func(t *testing.T) {
 				a := assertions.New(t)
-				for i := 0; i < 2*maxRate; i++ {
+				for i := uint64(0); i < 2*maxRate; i++ {
 					headers := metadata.MD{}
 					_, err := client.GetConcentratorConfig(test.Context(), &pbtypes.Empty{}, grpc.Header(&headers))
 					a.So(err, should.BeNil)
@@ -61,16 +69,39 @@ func TestGRPC(t *testing.T) {
 			})
 
 			t.Run("Stream", func(t *testing.T) {
-				// TODO
+				a := assertions.New(t)
+
+				ctx := metadata.NewOutgoingContext(test.Context(), metadata.Pairs("test-stream-id", "1"))
+				stream, err := client.LinkGateway(ctx)
+				if err != nil {
+					panic(err)
+				}
+				md, err := stream.Header()
+				if err != nil {
+					panic(err)
+				}
+				a.So(md.Get("x-rate-limit-limit")[0], should.Equal, "0")
+				a.So(md.Get("x-rate-limit-reset")[0], should.Equal, "1")
+
+				for i := uint64(0); i < 2*maxRate; i++ {
+					err := stream.Send(&ttnpb.GatewayUp{})
+					a.So(err, should.BeNil)
+				}
+
+				select {
+				case <-server.ch["1"]:
+					t.Fatal("Unexpected rate limiting error")
+				case <-time.After(timeout):
+				}
 			})
 		})
 	})
 
-	withRateLimitedGRPCServer(conf, func(client ttnpb.GtwGsClient) {
+	withRateLimitedGRPCServer(conf, func(server *mockServer, client ttnpb.GtwGsClient) {
 		t.Run("RateLimit", func(t *testing.T) {
 			t.Run("Invoke", func(t *testing.T) {
 				a := assertions.New(t)
-				for i := 0; i < 2*maxRate; i++ {
+				for i := uint64(0); i < 2*maxRate; i++ {
 					headers := metadata.MD{}
 					_, err := client.GetConcentratorConfig(test.Context(), &pbtypes.Empty{}, grpc.Header(&headers))
 					a.So(headers.Get("x-rate-limit-limit"), should.Resemble, []string{fmt.Sprintf("%d", maxRate)})
@@ -98,8 +129,53 @@ func TestGRPC(t *testing.T) {
 			})
 
 			t.Run("Stream", func(t *testing.T) {
-				// TODO
+				a := assertions.New(t)
+				wg := sync.WaitGroup{}
+				errCh := make(chan error, 1)
+				defer close(errCh)
+
+				for k := 0; k < 5; k++ {
+					wg.Add(1)
+					go func(k int) {
+						ctx := metadata.NewOutgoingContext(test.Context(), metadata.Pairs("test-stream-id", fmt.Sprintf("%d", k)))
+						stream, err := client.LinkGateway(ctx)
+						if err != nil {
+							panic(err)
+						}
+						md, err := stream.Header()
+						if err != nil {
+							panic(err)
+						}
+						a.So(md.Get("x-rate-limit-limit")[0], should.Equal, fmt.Sprintf("%d", maxRate))
+						a.So(md.Get("x-rate-limit-reset")[0], should.Equal, "1")
+
+						for i := uint64(0); i < 2*maxRate; i++ {
+							err := stream.Send(&ttnpb.GatewayUp{})
+							if err != nil && !errors.IsResourceExhausted(err) {
+								panic(err)
+							}
+						}
+
+						select {
+						case count := <-server.ch[fmt.Sprintf("%d", k)]:
+							a.So(count, should.Equal, maxRate)
+						case <-time.After(timeout):
+							errCh <- fmt.Errorf("Timed out waiting for rate limit exceeded error")
+						}
+
+						wg.Done()
+					}(k)
+				}
+
+				select {
+				case err := <-errCh:
+					t.Fatal("Received unexpected error", err)
+				case <-time.After(timeout):
+				}
+
+				wg.Wait()
 			})
+
 		})
 	})
 }

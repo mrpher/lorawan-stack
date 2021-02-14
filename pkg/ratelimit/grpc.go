@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"go.thethings.network/lorawan-stack/v3/pkg/auth"
-	"go.thethings.network/lorawan-stack/v3/pkg/errors"
 	"go.thethings.network/lorawan-stack/v3/pkg/rpcmetadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -85,19 +84,17 @@ func GrpcMaxWait(t time.Duration) GrpcMaxWaitFunc {
 // GrpcRateLimits is a GrpcRateFunc with a default rate limit and overrides for specific methods.
 func GrpcRateLimits(c Config) GrpcRateFunc {
 	return func(_ context.Context, fullMethod string) uint64 {
-		if rate, ok := c.Overrides[fullMethod]; ok {
-			return rate
+		if c.Overrides != nil {
+			if rate, ok := c.Overrides[fullMethod]; ok {
+				return rate
+			}
 		}
 		return c.Rate
 	}
 }
 
-var (
-	errRateLimitExceeded = errors.DefineResourceExhausted("rate_limit_exceeded", "rate limit exceeded")
-)
-
-// GrpcUnaryServerInterceptor returns a gRPC unary server interceptor that rate limits gRPC calls.
-func GrpcUnaryServerInterceptor(l RateLimiter, keyFunc GrpcKeyFunc, waitFunc GrpcMaxWaitFunc, rateFunc GrpcRateFunc) grpc.UnaryServerInterceptor {
+// UnaryServerInterceptor returns a gRPC unary server interceptor that rate limits gRPC calls.
+func UnaryServerInterceptor(l RateLimiter, keyFunc GrpcKeyFunc, waitFunc GrpcMaxWaitFunc, rateFunc GrpcRateFunc) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		if key := keyFunc(ctx, info.FullMethod); key != "" {
 			md, ok := l.WaitMaxDurationWithRate(key, waitFunc(ctx, info.FullMethod), func() uint64 { return rateFunc(ctx, info.FullMethod) })
@@ -112,5 +109,47 @@ func GrpcUnaryServerInterceptor(l RateLimiter, keyFunc GrpcKeyFunc, waitFunc Grp
 			time.Sleep(md.Wait)
 		}
 		return handler(ctx, req)
+	}
+}
+
+type streamWrapper struct {
+	grpc.ServerStream
+
+	limiter RateLimiter
+	rate    uint64
+	maxWait time.Duration
+}
+
+func (s *streamWrapper) RecvMsg(msg interface{}) error {
+	md, ok := s.limiter.WaitMaxDurationWithRate("stream", s.maxWait, func() uint64 { return s.rate })
+	if !ok {
+		return errRateLimitExceeded.New()
+	}
+	time.Sleep(md.Wait)
+	if err := s.ServerStream.RecvMsg(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
+// StreamServerInterceptor returns a new streaming server interceptor that rate limits messages on
+// the receiving end.
+func StreamServerInterceptor(rateLimiterFunc func() RateLimiter, maxWaitFunc GrpcMaxWaitFunc, rateFunc GrpcRateFunc) grpc.StreamServerInterceptor {
+	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		// TODO: rate limit new streams. may need config and refactor
+
+		rate := rateFunc(stream.Context(), info.FullMethod)
+		wrapped := &streamWrapper{
+			ServerStream: stream,
+
+			limiter: rateLimiterFunc(),
+			maxWait: maxWaitFunc(stream.Context(), info.FullMethod),
+			rate:    rate,
+		}
+		wrapped.SetHeader(metadata.Pairs(
+			"x-rate-limit-limit", strconv.FormatUint(rate, 10),
+			"x-rate-limit-reset", "1",
+		))
+		return handler(srv, wrapped)
 	}
 }

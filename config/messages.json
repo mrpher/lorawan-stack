@@ -3824,6 +3824,15 @@
       "file": "format.go"
     }
   },
+  "error:pkg/gatewayserver/io/mqtt:rate_limit_exceeded": {
+    "translations": {
+      "en": "rate limit exceeded"
+    },
+    "description": {
+      "package": "pkg/gatewayserver/io/mqtt",
+      "file": "mqtt.go"
+    }
+  },
   "error:pkg/gatewayserver/io/udp:already_connected": {
     "translations": {
       "en": "gateway is already connected"
@@ -3894,6 +3903,15 @@
     "description": {
       "package": "pkg/gatewayserver/io/udp",
       "file": "firewall_ratelimit.go"
+    }
+  },
+  "error:pkg/gatewayserver/io/udp:rate_limit_exceeded_for_address": {
+    "translations": {
+      "en": "rate limit exceeded for address `{address}`"
+    },
+    "description": {
+      "package": "pkg/gatewayserver/io/udp",
+      "file": "udp.go"
     }
   },
   "error:pkg/gatewayserver/io/udp:udp_frontend_recovered": {
@@ -4007,6 +4025,15 @@
   "error:pkg/gatewayserver/io/ws:no_auth_provided": {
     "translations": {
       "en": "no auth provided `{uid}`"
+    },
+    "description": {
+      "package": "pkg/gatewayserver/io/ws",
+      "file": "ws.go"
+    }
+  },
+  "error:pkg/gatewayserver/io/ws:rate_limit_exceeded": {
+    "translations": {
+      "en": "rate limit exceeded"
     },
     "description": {
       "package": "pkg/gatewayserver/io/ws",
@@ -7079,7 +7106,7 @@
     },
     "description": {
       "package": "pkg/ratelimit",
-      "file": "grpc.go"
+      "file": "config.go"
     }
   },
   "error:pkg/redis:decode": {

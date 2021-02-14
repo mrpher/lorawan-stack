@@ -14,7 +14,11 @@
 
 package ratelimit
 
-import "time"
+import (
+	"time"
+
+	"go.thethings.network/lorawan-stack/v3/pkg/errors"
+)
 
 // Config represents configuration for rate limiting.
 type Config struct {
@@ -23,3 +27,5 @@ type Config struct {
 	MaxWait   time.Duration     `name:"max-wait" description:"Maximum time to wait for rate limiting"`
 	Overrides map[string]uint64 `name:"overrides" description:"Override rate limits"`
 }
+
+var errRateLimitExceeded = errors.DefineResourceExhausted("rate_limit_exceeded", "rate limit exceeded")

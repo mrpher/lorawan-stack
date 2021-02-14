@@ -163,6 +163,11 @@ func New(ctx context.Context, opts ...Option) *Server {
 		metrics.StreamServerInterceptor,
 		errors.StreamServerInterceptor(),
 		// NOTE: All middleware that works with lorawan-stack/pkg/errors errors must be placed below.
+		ratelimit.StreamServerInterceptor(
+			func() ratelimit.RateLimiter { return options.rateLimitingConfig.Stream.New() },
+			ratelimit.GrpcMaxWait(options.rateLimitingConfig.Stream.MaxWait),
+			ratelimit.GrpcRateLimits(options.rateLimitingConfig.Stream),
+		),
 		sentrymiddleware.StreamServerInterceptor(),
 		grpc_recovery.StreamServerInterceptor(recoveryOpts...),
 		validator.StreamServerInterceptor(),
@@ -180,7 +185,7 @@ func New(ctx context.Context, opts ...Option) *Server {
 		metrics.UnaryServerInterceptor,
 		errors.UnaryServerInterceptor(),
 		// NOTE: All middleware that works with lorawan-stack/pkg/errors errors must be placed below.
-		ratelimit.GrpcUnaryServerInterceptor(
+		ratelimit.UnaryServerInterceptor(
 			options.rateLimitingConfig.ByRemoteIP.New(),
 			ratelimit.GrpcRemoteIPAndMethod,
 			ratelimit.GrpcMaxWait(options.rateLimitingConfig.ByRemoteIP.MaxWait),

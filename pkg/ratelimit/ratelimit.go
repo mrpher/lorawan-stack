@@ -76,6 +76,8 @@ func (r *Registry) getOrCreate(id string, createFunc func(uint64) *ratelimit.Buc
 		return limiter
 	}
 	limiter = createFunc(rateFunc())
+	// TODO: this may lead to a race condition and leak buckets
+	// TODO: garbage collection. maybe delete old buckets from the map instead of resetting.
 	r.mu.Lock()
 	r.entities[id] = limiter
 	r.mu.Unlock()

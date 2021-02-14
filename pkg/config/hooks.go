@@ -129,6 +129,54 @@ func stringToStringMapHookFunc(f reflect.Type, t reflect.Type, data interface{})
 	return m, nil
 }
 
+// stringSliceToUint64MapHookFunc is a hook for mapstructure that decodes []string to map[string]uint64.
+func stringSliceToUint64MapHookFunc(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.Slice || f.Elem().Kind() != reflect.String ||
+		t.Kind() != reflect.Map || t.Elem().Kind() != reflect.Uint64 {
+		return data, nil
+	}
+	sl := data.([]string)
+	m := make(map[string]uint64, len(sl))
+	for _, s := range sl {
+		p := strings.SplitN(s, "=", 2)
+		if len(p) != 2 {
+			return nil, errFormat.WithAttributes("input", s)
+		}
+		value, err := strconv.ParseUint(p[1], 10, 64)
+		if err != nil {
+			return nil, errFormat.WithCause(err).WithAttributes("input", s)
+		}
+		m[p[0]] = value
+	}
+
+	return m, nil
+}
+
+// stringToUint64MapHookFunc is a hook for mapstructure that decodes string to map[string]string.
+func stringToUint64MapHookFunc(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+	if f.Kind() != reflect.String || t.Kind() != reflect.Map || t.Elem().Kind() != reflect.Uint64 {
+		return data, nil
+	}
+
+	str := data.(string)
+	slice := strings.Fields(str)
+
+	m := make(map[string]uint64, len(slice))
+	for _, s := range slice {
+		p := strings.SplitN(s, "=", 2)
+		if len(p) != 2 {
+			return nil, errFormat.WithAttributes("input", s)
+		}
+		value, err := strconv.ParseUint(p[1], 10, 64)
+		if err != nil {
+			return nil, errFormat.WithCause(err).WithAttributes("input", s)
+		}
+		m[p[0]] = value
+	}
+
+	return m, nil
+}
+
 // stringToBufferMapHookFunc is a hook for mapstructure that decodes string or []string to map[string][]byte.
 func stringToBufferMapHookFunc(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
 	if (f.Kind() != reflect.String && (f.Kind() != reflect.Slice || f.Elem().Kind() != reflect.String)) ||

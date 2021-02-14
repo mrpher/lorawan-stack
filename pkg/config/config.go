@@ -213,8 +213,10 @@ func (m *Manager) Unmarshal(result interface{}) error {
 			mapstructure.StringToTimeDurationHookFunc(),
 			stringToTimeHookFunc(TimeFormat),
 			stringSliceToStringMapHookFunc,
+			stringSliceToUint64MapHookFunc,
 			stringSliceToStringMapStringSliceHookFunc,
 			stringToStringMapHookFunc,
+			stringToUint64MapHookFunc,
 			stringToBufferMapHookFunc,
 			stringSliceToStringHookFunc,
 			configurableInterfaceHook,
@@ -506,6 +508,15 @@ func (m *Manager) setDefaults(prefix string, flags *pflag.FlagSet, config interf
 			case *tls.Config:
 
 			case map[string]string:
+				defs := make([]string, 0, len(val))
+				for k, v := range val {
+					defs = append(defs, fmt.Sprintf("%s=%v", k, v))
+				}
+
+				flags.StringSliceP(name, shorthand, defs, description)
+				m.viper.SetDefault(name, val)
+
+			case map[string]uint64:
 				defs := make([]string, 0, len(val))
 				for k, v := range val {
 					defs = append(defs, fmt.Sprintf("%s=%v", k, v))

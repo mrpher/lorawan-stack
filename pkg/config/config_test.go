@@ -72,6 +72,7 @@ type example struct {
 	Bytes     []byte        `name:"bytes" description:"A slice of bytes"`
 
 	StringMap      map[string]string   `name:"stringmap" description:"A map of strings"`
+	Uint64Map      map[string]uint64   `name:"uint64map" description:"A map of uint64"`
 	BufferMap      map[string][]byte   `name:"buffermap" description:"A map of buffers"`
 	StringMapSlice map[string][]string `name:"stringmapslice" description:"A map of string slices"`
 
@@ -99,6 +100,9 @@ var (
 		Bytes:     []byte{0x01, 0xFA},
 		StringMap: map[string]string{
 			"foo": "bar",
+		},
+		Uint64Map: map[string]uint64{
+			"foo": 100,
 		},
 		BufferMap: map[string][]byte{
 			"foo": {0xb, 0xa, 0xf},
@@ -200,6 +204,9 @@ func TestConfigEnv(t *testing.T) {
 			"q": "r",
 			"s": "t",
 		},
+		Uint64Map: map[string]uint64{
+			"foo": 100,
+		},
 		BufferMap: map[string][]byte{
 			"a": {0xb, 0xcd},
 			"c": {0xd, 0xef},
@@ -231,6 +238,7 @@ func TestBadConfigEnv(t *testing.T) {
 	settings := new(example)
 
 	os.Setenv("TEST_STRINGMAP", "q=r ff = f ff s=t")
+	os.Setenv("TEST_UINT64MAP", "foo3=300")
 	os.Setenv("TEST_BUFFERMAP", "a=0x0b  cd c=0x0=def")
 	os.Setenv("TEST_STRINGMAPSLICE", "a=b= a=c fzef f d=e")
 
@@ -260,6 +268,7 @@ func TestConfigFlags(t *testing.T) {
 	os.Unsetenv("TEST_STRINGPTR")
 	os.Unsetenv("TEST_BYTES")
 	os.Unsetenv("TEST_STRINGMAP")
+	os.Unsetenv("TEST_UINT64MAP")
 	os.Unsetenv("TEST_BUFFERMAP")
 	os.Unsetenv("TEST_STRINGMAPSLICE")
 	os.Unsetenv("TEST_NESTED_STRING")
@@ -280,6 +289,8 @@ func TestConfigFlags(t *testing.T) {
 		"--bytes", "99FD",
 		"--stringmap", "q=r",
 		"--stringmap", "s=t",
+		"--uint64map", "foo2=200",
+		"--uint64map", "foo4=400",
 		"--buffermap", "a=0x0bcd",
 		"--buffermap", "c=0x0def",
 		"--nested.string", "mud",
@@ -310,6 +321,10 @@ func TestConfigFlags(t *testing.T) {
 		StringMap: map[string]string{
 			"q": "r",
 			"s": "t",
+		},
+		Uint64Map: map[string]uint64{
+			"foo2": 200,
+			"foo4": 400,
 		},
 		BufferMap: map[string][]byte{
 			"a": {0xb, 0xcd},

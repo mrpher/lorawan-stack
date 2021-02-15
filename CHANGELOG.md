@@ -11,6 +11,9 @@ For details about compatibility between different releases, see the **Commitment
 
 ### Added
 
+- State Description fields for adding context to the (rejected, flagged, suspended) state of Users and OAuth clients.
+  - This requires a database schema migration (`ttn-lw-stack is-db migrate`) because of the added columns.
+
 ### Changed
 
 ### Deprecated

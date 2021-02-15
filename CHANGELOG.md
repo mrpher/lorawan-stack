@@ -53,6 +53,9 @@ For details about compatibility between different releases, see the **Commitment
   - Functionality to change basic profile information, such as name, email address and profile picture.
   - Functionality to update the account password.
   - Functionality to delete the account.
+
+### Changed
+
 - Network Server does not store `recent_uplinks`, `recent_adr_uplinks` and `recent_downlinks` anymore.
 - Improved Network Server downlink task performance.
 - Improved Network Server matching performance.

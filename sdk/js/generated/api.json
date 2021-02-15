@@ -5692,7 +5692,7 @@
             },
             {
               "name": "state",
-              "description": "The reviewing state of the client.\nThis field can only be modified by admins.",
+              "description": "The reviewing state of the client.\nThis field can only be modified by admins.\nIf state_description is not updated when updating state, state_description is cleared.",
               "label": "",
               "type": "State",
               "longType": "State",
@@ -5704,6 +5704,24 @@
                   {
                     "name": "enum.defined_only",
                     "value": true
+                  }
+                ]
+              }
+            },
+            {
+              "name": "state_description",
+              "description": "A description for the state field.\nThis field can only be modified by admins, and should typically only be updated\nwhen also updating `state`.",
+              "label": "",
+              "type": "string",
+              "longType": "string",
+              "fullType": "string",
+              "ismap": false,
+              "defaultValue": "",
+              "options": {
+                "validate.rules": [
+                  {
+                    "name": "string.max_len",
+                    "value": 128
                   }
                 ]
               }
@@ -29843,6 +29861,24 @@
                   {
                     "name": "enum.defined_only",
                     "value": true
+                  }
+                ]
+              }
+            },
+            {
+              "name": "state_description",
+              "description": "A description for the state field.\nThis field can only be modified by admins, and should typically only be updated\nwhen also updating `state`.",
+              "label": "",
+              "type": "string",
+              "longType": "string",
+              "fullType": "string",
+              "ismap": false,
+              "defaultValue": "",
+              "options": {
+                "validate.rules": [
+                  {
+                    "name": "string.max_len",
+                    "value": 128
                   }
                 ]
               }

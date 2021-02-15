@@ -74,11 +74,7 @@ func (s *srv) accept() error {
 
 		go func() {
 			ctx := log.NewContextWithFields(s.ctx, log.Fields("remote_addr", mqttConn.RemoteAddr().String()))
-			conn := &connection{
-				server: s.server,
-				mqtt:   mqttConn,
-				format: s.format,
-			}
+			conn := &connection{server: s.server, mqtt: mqttConn, format: s.format}
 			if err := conn.setup(ctx); err != nil {
 				switch err {
 				case stdio.EOF, stdio.ErrUnexpectedEOF:

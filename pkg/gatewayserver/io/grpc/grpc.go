@@ -64,9 +64,7 @@ type impl struct {
 
 // New returns a new gRPC frontend.
 func New(server io.Server, opts ...Option) ttnpb.GtwGsServer {
-	i := &impl{
-		server: server,
-	}
+	i := &impl{server: server}
 	for _, opt := range opts {
 		opt.apply(i)
 	}

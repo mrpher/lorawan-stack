@@ -163,7 +163,7 @@ message TxAcknowledgment {
   }
   Result result = 2 [(validate.rules).enum.defined_only = true];
 
-  // Copy of the acknowledged downlink message. Set by the frontend before forwarding to the Gateway Server.
+  // The acknowledged downlink message. Set by the Gateway Server.
   DownlinkMessage downlink_message = 3;
 }
 

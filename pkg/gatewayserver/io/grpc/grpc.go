@@ -137,11 +137,9 @@ func (s *impl) LinkGateway(link ttnpb.GtwGs_LinkGatewayServer) error {
 				}
 			}
 			if ack := msg.TxAcknowledgment; ack != nil {
-				if ack.DownlinkMessage == nil {
-					if token, ok := s.tokens.ParseTokenFromCorrelationIDs(ack.GetCorrelationIDs()); ok {
-						if down, _, ok := s.tokens.Get(token, time.Now()); ok {
-							ack.DownlinkMessage = down
-						}
+				if token, ok := s.tokens.ParseTokenFromCorrelationIDs(ack.GetCorrelationIDs()); ok {
+					if down, _, ok := s.tokens.Get(token, time.Now()); ok {
+						ack.DownlinkMessage = down
 					}
 				}
 				if err := conn.HandleTxAck(ack); err != nil {

@@ -328,11 +328,9 @@ func (c *connection) deliver(pkt *packet.PublishPacket) {
 			logger.WithError(err).Warn("Failed to unmarshal Tx acknowledgment message")
 			return
 		}
-		if ack.DownlinkMessage == nil {
-			if token, ok := c.tokens.ParseTokenFromCorrelationIDs(ack.GetCorrelationIDs()); ok {
-				if down, _, ok := c.tokens.Get(token, time.Now()); ok {
-					ack.DownlinkMessage = down
-				}
+		if token, ok := c.tokens.ParseTokenFromCorrelationIDs(ack.GetCorrelationIDs()); ok {
+			if down, _, ok := c.tokens.Get(token, time.Now()); ok {
+				ack.DownlinkMessage = down
 			}
 		}
 		if err := c.io.HandleTxAck(ack); err != nil {

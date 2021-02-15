@@ -5810,7 +5810,7 @@ Downlink message from the network to the end device
 | ----- | ---- | ----- | ----------- |
 | `correlation_ids` | [`string`](#string) | repeated | Correlation IDs for the downlink message. Set automatically by the UDP and LBS frontends. For gRPC and the MQTT v3 frontends, the correlation IDs must match the ones of the downlink message the TxAck message refers to. |
 | `result` | [`TxAcknowledgment.Result`](#ttn.lorawan.v3.TxAcknowledgment.Result) |  |  |
-| `downlink_message` | [`DownlinkMessage`](#ttn.lorawan.v3.DownlinkMessage) |  | Copy of the acknowledged downlink message. Set by the frontend before forwarding to the Gateway Server. |
+| `downlink_message` | [`DownlinkMessage`](#ttn.lorawan.v3.DownlinkMessage) |  | The acknowledged downlink message. Set by the Gateway Server. |
 
 #### Field Rules
 

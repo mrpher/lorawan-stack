@@ -24023,7 +24023,7 @@
             },
             {
               "name": "downlink_message",
-              "description": "Copy of the acknowledged downlink message. Set by the frontend before forwarding to the Gateway Server.",
+              "description": "The acknowledged downlink message. Set by the Gateway Server.",
               "label": "",
               "type": "DownlinkMessage",
               "longType": "DownlinkMessage",

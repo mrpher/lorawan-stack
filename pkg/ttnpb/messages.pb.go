@@ -346,7 +346,7 @@ type TxAcknowledgment struct {
 	// For gRPC and the MQTT v3 frontends, the correlation IDs must match the ones of the downlink message the TxAck message refers to.
 	CorrelationIDs []string                `protobuf:"bytes,1,rep,name=correlation_ids,json=correlationIds,proto3" json:"correlation_ids,omitempty"`
 	Result         TxAcknowledgment_Result `protobuf:"varint,2,opt,name=result,proto3,enum=ttn.lorawan.v3.TxAcknowledgment_Result" json:"result,omitempty"`
-	// Copy of the acknowledged downlink message. Set by the frontend before forwarding to the Gateway Server.
+	// The acknowledged downlink message. Set by the Gateway Server.
 	DownlinkMessage      *DownlinkMessage `protobuf:"bytes,3,opt,name=downlink_message,json=downlinkMessage,proto3" json:"downlink_message,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
 	XXX_sizecache        int32            `json:"-"`

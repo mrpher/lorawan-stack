@@ -38,7 +38,7 @@ describe('Account App profile settings', () => {
 
     cy.findByText('Profile picture').should('be.visible')
     cy.findByLabelText('Use Gravatar')
-      .should('be.visible')
+      .should('exist')
       .and('be.checked')
     cy.findByLabelText('Upload an image')
       .should('be.visible')
@@ -112,7 +112,7 @@ describe('Account App profile settings', () => {
     cy.findByAltText('Current image')
       .should('be.visible')
       .and('have.attr', 'src')
-      .and('be', `data:image/png;base64,${cy.fixture(imageFile)}`)
+      .and('eq', `data:image/png;base64,${cy.fixture(imageFile)}`)
 
     cy.findByRole('button', { name: 'Save changes' }).click()
     cy.findByTestId('error-notification').should('not.exist')

@@ -129,7 +129,7 @@
     "yup": "^0.29.1"
   },
   "resolutions": {
-    "cypress": "4.11.0"
+    "cypress": "6.5.0"
   },
   "babel": {
     "extends": "./config/.babelrc"

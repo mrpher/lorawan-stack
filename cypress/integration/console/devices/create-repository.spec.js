@@ -410,7 +410,7 @@ describe('End device repository create', () => {
         cy.findByTestId('full-error-view').should('not.exist')
       })
 
-      it('succeeds registering two the things uno', () => {
+      it.only('succeeds registering two the things uno', () => {
         const devId1 = 'test-abp-dev-1'
 
         // End device selection.
@@ -425,6 +425,8 @@ describe('End device repository create', () => {
         cy.findByLabelText('NwkSKey').type(generateHexValue(32))
         cy.findByLabelText('End device ID').type(devId1)
         cy.findByLabelText('Register another end device of this type').check()
+
+        cy.findByRole('button', { name: 'Register end device' }).click()
 
         const devId2 = 'test-abp-dev-2'
 

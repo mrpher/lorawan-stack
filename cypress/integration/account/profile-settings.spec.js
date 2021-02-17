@@ -41,7 +41,7 @@ describe('Account App profile settings', () => {
       .should('exist')
       .and('be.checked')
     cy.findByLabelText('Upload an image')
-      .should('be.visible')
+      .should('exist')
       .and('not.be.checked')
     cy.findByLabelText('User ID')
       .should('be.visible')

@@ -59,7 +59,7 @@ describe('Gateway create', () => {
     cy.findByLabelText('Schedule downlink late').should('exist')
     cy.findByLabelText('Duty cycle').should('exist')
     cy.findByTestId('schedule_anytime_delay').should('be.visible')
-    cy.findByLabelText('Automatic updates').should('be.visible')
+    cy.findByLabelText('Automatic updates').should('exist')
     cy.findDescriptionByLabelText('Automatic updates')
       .should('contain', 'Gateway can be updated automatically')
       .and('be.visible')

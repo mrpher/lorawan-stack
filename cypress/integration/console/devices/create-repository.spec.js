@@ -104,6 +104,15 @@ describe('End device repository create', () => {
 
     describe('Test Brand', () => {
       beforeEach(() => {
+        cy.fixture('console/devices/repository/test-brand-otaa-model3.template.json').then(
+          templateJson => {
+            cy.intercept(
+              'GET',
+              `/dr/applications/${appId}/brands/test-brand-otaa/models/test-model3/1.0.1/EU_863_870/template`,
+              templateJson,
+            )
+          },
+        )
         cy.fixture('console/devices/repository/test-brand-otaa-model2.template.json').then(
           templateJson => {
             cy.intercept(
